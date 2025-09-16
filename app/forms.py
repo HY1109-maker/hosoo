@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, HiddenField, IntegerField
-from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Optional
+from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Optional, NumberRange
 from app.models import User # --- Userモデルをインポート ---
 
 class LoginForm(FlaskForm):
@@ -34,5 +34,5 @@ class RegistrationForm(FlaskForm):
 class ProductForm(FlaskForm):
     item_number = StringField('品番', validators=[DataRequired()])
     name = StringField('品名', validators=[DataRequired()])
-    stock_quantity = IntegerField('在庫数', validators=[DataRequired()])
+    stock_quantity = IntegerField('在庫数', validators=[DataRequired(), NumberRange(min=0)])
     submit = SubmitField('保存')

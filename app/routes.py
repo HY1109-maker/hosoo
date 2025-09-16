@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User
+from .models import User, Product
 from . import db
-from .forms import RegistrationForm, LoginForm
+from .forms import RegistrationForm, LoginForm, ProductForm
 
 main = Blueprint('main', __name__)
 
@@ -53,6 +53,51 @@ def register():
 @login_required
 def products():
     return render_template('products.html', title='Products')
+
+@main.route('/route/add', methods=['GET', 'POST'])
+@login_required
+def add_product():
+    form = ProductForm()
+    if form.validate_on_submit():
+        new_product = Product(
+            item_number=form.item_number.data,
+            name=form.name.data,
+            stock_quantity=form.stock_quantity.data
+        )
+        db.session.add(new_product)
+        db.session.commit()
+        flash('プロダクトが登録されました')
+        return redirect(url_for('main.products'))
+    return render_template('add_product.html', title='プロダクト追加',form=form)
+
+
+@main.route('/edit_product/<int:product_id>', methods=['GET','POST'])
+@login_required
+def edti_product(product_id):
+    product = Product.query.get_or_404(product_id)
+    form = ProductForm()
+    if form.validate_on_submit():
+        product.item_number = form.item_number.data
+        product.name = form.name.data
+        product.stock_quantity = form.stock_quantity.data
+        db.session.commit()
+        flash('プロダクが更新されました')
+        return redirect(url_for('main.products'))
+    elif request.method == 'GET':
+        form.item_number.data = product.item_number
+        form.name.data = product.name
+        form.stock_quantity.data = product.stock_quantity
+    return render_template('edit_product.html', title='プロダクト編集', form=form)
+
+
+@main.route('/delete_product/<int:product_id>', methods=['POST'])
+@login_required
+def delete_product(product_id):
+    product = Product.query.get_or_404(product_id)
+    db.session.delete(product)
+    db.session.commit()
+    flash('プロダクトが削除されました')
+    return redirect(url_for('main.products'))
 
 @main.route('/bill')
 @login_required

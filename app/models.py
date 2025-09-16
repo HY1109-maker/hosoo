@@ -22,7 +22,7 @@ class User(UserMixin, db.Model):
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     item_number = db.Column(db.String(120), unique=True, nullable=False)
-    name = db.Column(db.String(128), unique=True, nullable=False)
+    name = db.Column(db.String(128), nullable=False)
     stock_quantity = db.Column(db.Integer, nullable=False, default=0)
     
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

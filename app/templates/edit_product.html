@@ -2,10 +2,10 @@
 
 {% block content %}
 <div class="add-product-container form-container">
-    <h2>新しいプロダクトを登録</h2>
-    <form action="" method="post" novalidate enctype="multipart/form-data">
+    <h2>プロダクトのプロパティを編集</h2>
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
         <div class="form-step">
-            <h3>品番の登録</h3>
             <div class="form-group">
                 {{ form.item_number.label }}<br>
                 {{ form.item_number(class="integer-input") }}
@@ -13,7 +13,6 @@
                     <span class="error-msg">[{{ error }}]</span>
                 {% endfor %}
             </div>
-            <h3>品名の登録</h3>
             <div class="form-group">
                 {{ form.name.label }}<br>
                 {{ form.name(class="textarea-input") }}
@@ -21,7 +20,6 @@
                     <span class="error-msg">[{{ error }}]</span>
                 {% endfor %}
             </div>
-            <h3>在庫数の登録</h3>
             <div class="form-group">
                 {{ form.stock_quantity.label }}<br>
                 {{ form.stock_quantity(class="Integer-input") }}

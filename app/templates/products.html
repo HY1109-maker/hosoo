@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>在庫一覧</h1>
+    <p>
+        <a href="{{url_for('main.add_product') }}" class="btn btn-primary">新しいプロダクトを追加</a>
+    </p>
+    <table class="table table-striped">
+        <thead>
+            <tr>品番</tr>
+            <tr>品名</tr>
+            <tr>在庫数</tr>
+            <tr>最終更新日</tr>
+            <tr>操作</tr>
+        </thead>
+        <tbody>
+            {% for product in puroducts %}
+            <tr>
+                <td>{{ product.item_number }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.stock_quantity }}</td>
+                <td>{{ product.last_update.strftime('%y-%m-%d %H:%M') }}</td>
+                <td>
+                    <a href="{{url_for('main.edit_product', product_id=product.id)}}" class="btn bbtn-secondary btn-sm">編集</a>
+                    <form action="{{url_for('main.delete_product', product_id=product.id)}}" method="post" style="display: inline;">
+                        <input type="submit" value="削除" class="btn btn-danger btn-sm" onclick="return confirm('本当に削除しますか？');">
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{%endblock%}
