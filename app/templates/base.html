@@ -26,9 +26,16 @@
     <body>
         <header>
         <div class="header-box">
+            <div class="header-logo">
+                <a href="{{ url_for('main.index') }}">
+                    <img src="{{ url_for('static', filename=('image/logo.png'))}}" alt="logo">
+                </a>
+            </div>
             <div class="login-box">
                 {% if current_user.is_anonymous %}
                     <a href="{{ url_for('main.login') }}" class="login-btn">Log In</a>
+                {% else %}
+                    <a href="{{ url_for('main.logout')}}"> logout</a>
                 {% endif %}
             </div>
         </div>

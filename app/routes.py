@@ -31,6 +31,11 @@ def login():
         return redirect(url_for('main.index'))
     return render_template('login.html', title ='Sign In', form =form)
 
+@main.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('main.index'))
+
 @main.route('/register', methods=['GET','POST'])
 def register():
     form = RegistrationForm()
