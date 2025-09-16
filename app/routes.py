@@ -47,3 +47,24 @@ def register():
         flash("ユーザー登録が完了しました")
         return redirect(url_for('main.login'))
     return render_template('register.html', title='Register', form=form)
+
+
+@main.route('/products')
+@login_required
+def products():
+    return render_template('products.html', title='Products')
+
+@main.route('/bill')
+@login_required
+def bill():
+    return render_template('bill.html', title='Bill')
+
+@main.route('/')
+@login_required
+def sails():
+    return render_template('sails_index.html', title='Sails')
+
+@main.route('/')
+@login_required
+def user_profile():
+    return render_template('user_profile.html', title='Sails')
