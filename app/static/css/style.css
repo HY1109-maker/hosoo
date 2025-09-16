@@ -1,0 +1,102 @@
+html {
+  font-size: 62.5%;
+}
+
+body {
+    margin: 0 4%;
+    font-family: 'Noto serif JP', 'Times New Roman', serif;
+    background-color: #f0f2f5; /* 少し背景色をつけます */
+    font-size: 1.6rem;
+    line-height: 1.5;
+    padding-bottom: 70px; /* for bottom nav */
+}
+
+h1 {
+  font-size: clamp(2.4rem, 5vw, 4.8rem);
+}
+
+h2 {
+  font-size: clamp(2.0rem, 3vw, 3.2rem);
+}
+
+p {
+  font-size: 1.6rem;
+}
+
+a {
+    display: block;
+    font-size: clamp(0.1rem, 3vw, 1.2rem);
+}
+
+/* Header Styles */
+.header-box {
+    display: flex;
+    padding-top: 2px;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgb(169, 169, 169);
+}
+
+.logo-placeholder {
+    width: 10rem;
+}
+
+.logo-placeholder img {
+    width: 100%;
+}
+
+.login-box {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.login-box a {
+    display: block;
+    white-space: nowrap;
+    text-decoration: none;
+    color: black;
+}
+
+.bottom-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* header Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: #ffffff;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-top: 1px solid #e0e0e0;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+    z-index: 1000;
+}
+.nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #888;
+    font-size: 1rem;
+}
+.nav-icon {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 2px;
+}
+.nav-link:hover {
+    color: #333;
+}
+
+.nav-link.active {
+    color: #262626; /* アクティブな時の色を濃くする */
+    font-weight: bold; /* 少し太字にするのも良い */
+}
