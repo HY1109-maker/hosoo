@@ -20,8 +20,4 @@ def create_app(config_name='default'):
     from .routes import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
-    from . import models
-    with app.app_context():
-        db.create_all()
-
     return app

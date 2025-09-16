@@ -5,6 +5,7 @@ from . import db
 from .forms import RegistrationForm, LoginForm
 
 main = Blueprint('main', __name__)
+
 @main.route('/')
 @main.route('/index')
 def index():
@@ -12,10 +13,10 @@ def index():
     return render_template('index.html', title='Home')
 
 
-@main.route('/login', method=['GET', 'POST'])
+@main.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('main.index'))
     
     form = LoginForm()
     if form.validate_on_submit():
@@ -23,14 +24,14 @@ def login():
 
         if user is None or not user.check_password(form.password.data):
             flash('ユーザー名かパスワードが有効ではありません')
-            return redirect(url_for('login'))
+            return redirect(url_for('main.login'))
         
         login_user(user, remember=form.remember_me.data)
         flash(f'{user.username}様 ログインが完了しました')
-        return redirect(url_for('index'))
+        return redirect(url_for('main.index'))
     return render_template('login.html', title ='Sign In', form =form)
 
-@main.route('/register', method=['GET','POST'])
+@main.route('/register', methods=['GET','POST'])
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():
@@ -39,5 +40,5 @@ def register():
         db.session.add(user)
         db.session.commit()
         flash("ユーザー登録が完了しました")
-        return redirect(url_for('login'))
+        return redirect(url_for('main.login'))
     return render_template('register.html', title='Register', form=form)
