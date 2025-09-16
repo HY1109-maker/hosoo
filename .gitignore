@@ -1,1 +1,11 @@
+# .gitignore
+
+# 仮想環境
 .venv
+
+# Pythonのキャッシュファイル
+__pycache__/
+*.pyc
+
+# 開発用データベースファイル
+db.sqlite
