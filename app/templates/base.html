@@ -26,29 +26,9 @@
     <body>
         <header>
         <div class="header-box">
-            <div class="logo-placeholder">
-                <a href="{{ url_for('main.index')}}"><img class="logo" src="{{ url_for('static', filename='/imgs/logo_img.png')}}" alt="Foodies fan"></a>
-            </div>
             <div class="login-box">
                 {% if current_user.is_anonymous %}
                     <a href="{{ url_for('main.login') }}" class="login-btn">Log In</a>
-                {% else %}
-                    <div class="profile-dropdown">
-                        <button class="profile-btn">
-                            <div class="avatar-circle">
-                                <span>{{ current_user.username[0]|upper }}</span>
-                            </div>
-                        </button>
-                        <div class="dropdown-content">
-                            <div class="dropdown-header">
-                                <div class="avatar-circle large">
-                                    <span>{{ current_user.username[0]|upper }}</span>
-                                </div>
-                                <strong>{{ current_user.username }}</strong>
-                            </div>
-                            <!-- <a href="{{ url_for('user_profile', username=current_user.username) }}">Your Posts</a> <a href="{{ url_for('logout') }}">Logout</a> -->
-                        </div>
-                    </div>
                 {% endif %}
             </div>
         </div>
@@ -62,6 +42,5 @@
         {% if current_user.is_authenticated %}
 
         {% endif %}
-        <!-- <script src="{{ url_for('static', filename = 'js/main.js') }}"></script> -->
     </body>
 </html>
