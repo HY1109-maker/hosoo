@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, HiddenField, IntegerField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, IntegerField, HiddenField, FieldList, FormField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Optional, NumberRange
-from app.models import User, Product # --- Userモデルをインポート ---
+from app.models import User, Product, Store, Inventory # --- Userモデルをインポート ---
 
 class LoginForm(FlaskForm):
     username = StringField('ユーザー名', validators=[DataRequired()])
@@ -29,15 +29,38 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user is not None:
             raise ValidationError('別のメールアドレスを使用してください')
-
+    
 
 class ProductForm(FlaskForm):
+    # store = SelectField('店舗', coerce=int, validators=[DataRequired()])
+
     item_number = StringField('品番', validators=[DataRequired()])
-    name = StringField('品名', validators=[DataRequired()])
-    stock_quantity = IntegerField('在庫数', validators=[DataRequired(), NumberRange(min=0)])
-    submit = SubmitField('保存')
+    name = StringField('プロダクト名', validators=[DataRequired()])
+
+    # stock_quantity = IntegerField('初期在庫数', validators=[DataRequired(), NumberRange(min=0)])
+
+    submit = SubmitField('商品を登録')
 
     def validate_item_number(self, item_number):
         product = Product.query.filter_by(item_number=item_number.data).first()
         if product is not None:
-            raise ValidationError('この品番は既に使用されています。別の品番に変更してください。')
+            raise ValidationError('この商品は既に使用されています。')
+
+
+class EditInventoryForm(FlaskForm):
+    quantity = IntegerField('新しい在庫数', validators=[DataRequired(), NumberRange(min=0)])
+    threshold = IntegerField('警告閾値', validators=[DataRequired(), NumberRange(min=0)])
+    submit = SubmitField('更新')
+
+
+class InventoryEntryForm(FlaskForm):
+    store_id = HiddenField()
+    store_name = StringField('ストア名', render_kw={'readonly': True})
+    quantity = IntegerField('初期在庫数', default=0, validators=[DataRequired(), NumberRange(min=0)])
+
+    class Meta:
+        csrf = False
+
+class AllocateInventoryForm(FlaskForm):
+    inventories = FieldList(FormField(InventoryEntryForm))
+    submit = SubmitField('全店舗の在庫を保存')
