@@ -11,4 +11,4 @@ __pycache__/
 db.sqlite
 
 # 環境変数を格納するファイル (機密情報を含む場合)
-.env
+.flaskenv

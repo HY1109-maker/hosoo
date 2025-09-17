@@ -1,8 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Product
+from .models import User, Product, Store, Inventory, InventoryLog
 from . import db
-from .forms import RegistrationForm, LoginForm, ProductForm
+from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm
 
 main = Blueprint('main', __name__)
 
@@ -52,34 +52,149 @@ def register():
 @main.route('/products')
 @login_required
 def products():
-    all_products = Product.query.order_by(Product.name).all()
-    print("--- /products ページが読み込まれました ---")
-    print(f"データベースから取得した商品リスト: {all_products}")
-    return render_template('products.html', title='Products', products=all_products)
+    # 店舗で絞り込むためのクエリパラメータを取得
+    store_id_filter = request.args.get('store_id', type=int)
 
-@main.route('/route/add', methods=['GET', 'POST'])
+    # 全ての店舗と商品を取得
+    stores = Store.query.order_by('name').all()
+    products = Product.query.order_by('name').all()
+
+    # 表示用のデータを格納する辞書を準備
+    product_inventory_data = {}
+
+    for p in products:
+        # ▼▼▼ 在庫数を格納する辞書を改良 ▼▼▼
+        # { '店舗名': (数量, 在庫ID), ... } という形式で保存
+        inventory_by_store = {s.name: None for s in stores}
+        last_updated = None
+        is_alert_row = False
+        
+        for inv in p.inventories:
+            inventory_by_store[inv.store.name] = {
+                'quantity': inv.quantity,
+                'id': inv.id,
+                'threshold': inv.threshold
+            } # 数量とIDをタプルで保存
+            last_updated = inv.last_updated
+            if inv.quantity <= inv.threshold:
+                is_alert_row = True
+
+        product_inventory_data[p.id] = {
+            'product': p,
+            'inventories': inventory_by_store,
+            'last_updated': last_updated,
+            'is_alert_row': is_alert_row
+        }
+    
+    # 絞り込みが指定されている場合は、その店舗の在庫がある商品だけにフィルタリング
+    if store_id_filter:
+        filtered_store = Store.query.get(store_id_filter)
+        if filtered_store:
+            product_inventory_data = {
+                pid: data for pid, data in product_inventory_data.items()
+                if data['inventories'].get(filtered_store.name) is not None
+            }
+    
+
+
+    return render_template('products.html', 
+                           stores=stores, 
+                           product_data=product_inventory_data,
+                           selected_store_id=store_id_filter)
+
+
+
+# @main.route('/add_product', methods=['GET', 'POST'])
+# @login_required
+# def add_product():
+#     form = ProductForm()
+#     form.store.choices = [(s.id, s.name) for s in Store.query.order_by('name').all()]
+
+#     if form.validate_on_submit():
+#         # --- ▼▼▼ ロジックを全面的に書き換え ▼▼▼ ---
+        
+#         # 1. 品番で既存の商品を検索
+#         product = Product.query.filter_by(item_number=form.item_number.data).first()
+
+#         # 2. もし商品が存在しなければ、新しく作成
+#         if product is None:
+#             product = Product(item_number=form.item_number.data, name=form.name.data)
+#             db.session.add(product)
+#             flash(f'新しい商品「{product.name}」がマスタに登録されました。')
+
+#         # 3. 選択された店舗と商品の組み合わせで、在庫が既に存在しないかチェック
+#         store_id = form.store.data
+#         existing_inventory = Inventory.query.filter_by(product_id=product.id, store_id=store_id).first()
+        
+#         if existing_inventory:
+#             flash(f'エラー：「{product.name}」は既に「{existing_inventory.store.name}」の在庫として登録されています。', 'danger')
+#             return redirect(url_for('main.products'))
+
+#         # 4. 新しい在庫情報を作成
+#         inventory = Inventory(
+#             product=product,
+#             store_id=store_id,
+#             quantity=int(form.stock_quantity.data)
+#         )
+#         db.session.add(inventory)
+#         db.session.commit()
+        
+#         flash(f'「{product.name}」が「{inventory.store.name}」の在庫に登録されました。')
+#         return redirect(url_for('main.products'))
+
+#     return render_template('add_product.html', title='商品・在庫追加', form=form)
+
+@main.route('/add_product', methods=['GET', 'POST'])
 @login_required
 def add_product():
-    form = ProductForm()
-
-     # --- ▼▼▼ デバッグコードを追加 ▼▼▼ ---
-    if request.method == 'POST':
-        print("--- フォームがPOSTされました ---")
-        print(f"バリデーション結果: {form.validate_on_submit()}")
-        print(f"フォームのエラー内容: {form.errors}")
-
+    form=ProductForm()
     if form.validate_on_submit():
-        new_product = Product(
-            item_number=form.item_number.data,
-            name=form.name.data,
-            stock_quantity=form.stock_quantity.data
+        product = Product(
+            item_number = form.item_number.data,
+            name = form.name.data
         )
-        db.session.add(new_product)
+        db.session.add(product)
         db.session.commit()
-        flash('プロダクトが登録されました')
-        return redirect(url_for('main.products'))
-    return render_template('add_product.html', title='プロダクト追加',form=form)
 
+        flash(f'新しいプロダクト[{product.name}]がマスタに登録されました。続けて初期在庫を割り当てます。', 'info')
+
+        return redirect(url_for('main.allocate_inventory', product_id=product.id))
+    return render_template('add_product.html', title='商品マスタ登録', form=form)
+
+@main.route('/allocate_inventory/<int:product_id>', methods=['POST', 'GET'])
+@login_required
+def allocate_inventory(product_id):
+    product = Product.query.get_or_404(product_id)
+    form = AllocateInventoryForm()
+
+    if request.method == 'POST' and form.validate_on_submit():
+        for entry in form.inventories.data:
+            store_id = int(entry['store_id'])
+            quantity = int(entry['quantity'])
+
+            inventory = Inventory.query.filter_by(product_id=product.id, store_id=store_id).first()
+            if inventory:
+                inventory.quantity = quantity
+            else:
+                inventory = Inventory(
+                    product_id = product.id,
+                    store_id=store_id,
+                    quantity=quantity
+                )
+                db.session.add(inventory)
+
+        db.session.commit()
+        flash(f'[{product.name}]の在庫情報を保存しました。')
+        return redirect(url_for('main.products'))
+    
+    all_stores = Store.query.order_by('name').all()
+    for store in all_stores:
+        form.inventories.append_entry({
+            'store_id': store.id,
+            'store_name': store.name
+        })
+    
+    return render_template('allocate_inventory.html', title='在庫割り当て', form=form, product=product)
 
 @main.route('/edit_product/<int:product_id>', methods=['GET','POST'])
 @login_required
@@ -99,6 +214,41 @@ def edit_product(product_id):
         form.stock_quantity.data = product.stock_quantity
     return render_template('edit_product.html', title='プロダクト編集', form=form)
 
+@main.route('/edit_inventory/<int:inventory_id>', methods=['GET', 'POST'])
+@login_required
+def edit_inventory(inventory_id):
+    """特定の在庫情報を編集する"""
+    # 編集対象の在庫情報をIDで取得。見つからなければ404エラー
+    inventory = Inventory.query.get_or_404(inventory_id)
+    form = EditInventoryForm()
+
+    if form.validate_on_submit():
+        # --- 1. ログを記録 ---
+        # 変更前の在庫数を記録
+        quantity_before = inventory.quantity
+        
+        log_entry = InventoryLog(
+            inventory=inventory,
+            user=current_user,
+            quantity_before=quantity_before,
+            quantity_after=form.quantity.data
+        )
+        db.session.add(log_entry)
+
+        # --- 2. 在庫数を更新 ---
+        inventory.quantity = form.quantity.data
+        
+        # --- 3. ログと在庫数の変更を両方コミット ---
+        db.session.commit()
+        
+        flash(f'「{inventory.product.name}」の在庫が更新されました。')
+        return redirect(url_for('main.products'))
+
+    # ページが最初に表示された(GETリクエストの)場合、フォームに現在の在庫数を表示
+    elif request.method == 'GET':
+        form.quantity.data = inventory.quantity
+
+    return render_template('edit_inventory.html', title='在庫編集', form=form, inventory=inventory)
 
 @main.route('/delete_product/<int:product_id>', methods=['POST'])
 @login_required
@@ -123,3 +273,51 @@ def sails():
 @login_required
 def user_profile():
     return render_template('user_profile.html', title='Sails')
+
+
+@main.route('/api/update_inventory', methods=['POST'])
+@login_required
+def update_inventory():
+    data = request.get_json()
+    inventory_id = data.get('inventory_id')
+    new_quantity_str = data.get('quantity')
+    new_threshold_str = data.get('threshold')
+
+    # 入力値のバリデーション
+    if inventory_id is None or new_quantity_str is None or new_threshold_str is None:
+        return jsonify({'status': 'error', 'message': '無効なデータです'}), 400
+    
+    try:
+        # 文字列を数値(integer)に変換する
+        new_quantity = int(new_quantity_str)
+        new_threshold = int(new_threshold_str)
+    except (ValueError, TypeError):
+        # もし数値に変換できない文字（例: "abc"）が送られてきたらエラーを返す
+        return jsonify({'status': 'error', 'message': '数量と閾値は数値で入力してください'}), 400
+    
+    
+    inventory = Inventory.query.get(inventory_id)
+    if not inventory:
+        return jsonify({'status': 'error', 'message': '在庫が見つかりません'}), 404
+
+    # ログ記録と在庫更新（edit_inventoryからロジックを再利用）
+    quantity_before = inventory.quantity
+    log_entry = InventoryLog(
+        inventory=inventory,
+        user=current_user,
+        quantity_before=quantity_before,
+        quantity_after=new_quantity
+    )
+    db.session.add(log_entry)
+    
+    inventory.quantity = new_quantity
+    inventory.threshold = new_threshold
+
+    db.session.commit()
+
+    return jsonify({
+        'status': 'success',
+        'message': '在庫が更新されました',
+        'new_quantity': new_quantity,
+        'new_threshold': new_threshold
+    })

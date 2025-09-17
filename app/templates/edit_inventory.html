@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    {# inventoryオブジェクトから商品名や店舗名を参照できる #}
+    <h2>在庫編集: {{ inventory.product.name }} ({{ inventory.store.name }})</h2>
+    
+    <div class="form-container">
+        <form action="" method="post" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="form-group mb-3">
+                {{ form.quantity.label(class="form-label") }}
+                {{ form.quantity(class="form-control") }}
+                {% for error in form.quantity.errors %}
+                    <span class="error-msg text-danger">[{{ error }}]</span>
+                {% endfor %}
+            </div>
+            <div class="form-submit-area">
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('main.products') }}" class="btn btn-secondary">キャンセル</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

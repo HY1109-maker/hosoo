@@ -2,34 +2,203 @@
 
 {% block content %}
 <div class="container">
+    {# ページヘッダーと新規登録ボタン #}
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="mb-0">在庫一覧</h1>
-        <a href="{{ url_for('main.add_product') }}" class="btn btn-primary">新しい商品を追加</a>
+        <a href="{{ url_for('main.add_product') }}" class="btn btn-primary">商品・在庫を登録</a>
     </div>
-    <table class="table table-striped table-hover">
+
+    {# 店舗での絞り込み用フォーム #}
+    <form method="GET" action="{{ url_for('main.products') }}" class="mb-3">
+        <div class="input-group">
+            <select name="store_id" class="form-select">
+                <option value="">すべての店舗</option>
+                {% for store in stores %}
+                    <option value="{{ store.id }}" {% if store.id == selected_store_id %}selected{% endif %}>
+                        {{ store.name }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-outline-secondary" type="submit">絞り込み</button>
+        </div>
+    </form>
+
+    {# 在庫一覧テーブル #}
+    <table class="table table-bordered table-hover">
         <thead>
-            <tr>品番</tr>
-            <tr>品名</tr>
-            <tr>在庫数</tr>
-            <tr>最終更新日</tr>
-            <tr>操作</tr>
+            <tr class="table-light">
+                <th>品番</th>
+                <th>商品名</th>
+                {# 店舗名の数だけヘッダーを動的に生成 #}
+                {% for store in stores %}
+                    <th class="text-center">{{ store.name }}</th>
+                {% endfor %}
+                <th>最終更新日</th>
+                <th>操作</th>
+            </tr>
         </thead>
         <tbody>
-            {% for product in products %}
-            <tr>
-                <td>{{ product.item_number }}</td>
-                <td>{{ product.name }}</td>
-                <td>{{ product.stock_quantity }}</td>
-                <td>{{ product.last_updated.strftime('%y-%m-%d %H:%M') }}</td>
-                <td>
-                    <a href="{{url_for('main.edit_product', product_id=product.id)}}" class="btn bbtn-secondary btn-sm">編集</a>
-                    <form action="{{url_for('main.delete_product', product_id=product.id)}}" method="post" style="display: inline;">
-                        <input type="submit" value="削除" class="btn btn-danger btn-sm" onclick="return confirm('本当に削除しますか？');">
-                    </form>
-                </td>
-            </tr>
+            {# バックエンドで準備されたデータをループで表示 #}
+            {% for pid, data in product_data.items() %}
+                {# 行全体を警告表示にするかをチェック #}
+                <tr class="{{ 'table-danger' if data.is_alert_row }}">
+                    <td>{{ data.product.item_number }}</td>
+                    <td>{{ data.product.name }}</td>
+                    
+                    {# 各店舗の在庫数を順番に表示 #}
+                    {% for store in stores %}
+                        {% set inventory_info = data.inventories[store.name] %}
+                        {% if inventory_info %}
+                            {# 在庫数が閾値を下回るセルは個別に警告表示 #}
+                            <td class="editable-cell text-center {{ 'bg-warning' if inventory_info.quantity <= inventory_info.threshold }}"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#editInventoryModal"
+                                data-inventory-id="{{ inventory_info.id }}"
+                                data-quantity="{{ inventory_info.quantity }}"
+                                data-threshold="{{ inventory_info.threshold }}"
+                                data-product-name="{{ data.product.name }}"
+                                data-store-name="{{ store.name }}"
+                                style="cursor: pointer;">
+                                {{ inventory_info.quantity }}
+                            </td>
+                        {% else %}
+                            <td class="text-center">-</td>
+                        {% endif %}
+                    {% endfor %}
+
+                    <td>{{ data.last_updated.strftime('%Y-%m-%d %H:%M') if data.last_updated else 'N/A' }}</td>
+                    <td>
+                        <a href="#" class="btn btn-secondary btn-sm">詳細</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="{{ 4 + stores|length }}" class="text-center">商品が登録されていません。</td>
+                </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
-{%endblock%}
+
+<div class="modal fade" id="editInventoryModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editModalLabel">在庫編集</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong id="modalProductName"></strong> (<span id="modalStoreName"></span>)</p>
+        <form id="editInventoryForm">
+          <input type="hidden" id="modalInventoryId" name="inventory_id">
+          <div class="mb-3">
+            <label for="modalQuantityInput" class="form-label">新しい在庫数</label>
+            <input type="number" class="form-control" id="modalQuantityInput" name="quantity" required>
+          </div>
+          <div class="mb-3">
+            <label for="modalThresholdInput" class="form-label">警告閾値(デフォルト : 10)</label>
+            <input type="number" class="form-control" id="modalThresholdInput" name="threshold" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+        <button type="button" class="btn btn-primary" id="saveInventoryBtn">変更を保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+{# All your JavaScript goes in the scripts block #}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const editModal = document.getElementById('editInventoryModal');
+    const saveBtn = document.getElementById('saveInventoryBtn');
+    
+    let currentCell; // Variable to hold the cell that was clicked
+
+    // Event listener for when the modal is about to be shown
+    editModal.addEventListener('show.bs.modal', function (event) {
+        const cell = event.relatedTarget;
+        currentCell = cell;
+
+        const inventoryId = cell.getAttribute('data-inventory-id');
+        const quantity = cell.getAttribute('data-quantity');
+        const threshold = cell.getAttribute('data-threshold')
+        const productName = cell.getAttribute('data-product-name');
+        const storeName = cell.getAttribute('data-store-name');
+
+        // Update the modal's content
+        editModal.querySelector('#modalProductName').textContent = productName;
+        editModal.querySelector('#modalStoreName').textContent = storeName;
+        editModal.querySelector('#modalInventoryId').value = inventoryId;
+        editModal.querySelector('#modalQuantityInput').value = quantity;
+        editModal.querySelector('#modalThresholdInput').value = threshold;
+    });
+
+    // Event listener for the save button click
+    saveBtn.addEventListener('click', function () {
+        const inventoryId = document.getElementById('modalInventoryId').value;
+        const newQuantity = document.getElementById('modalQuantityInput').value;
+        const newThreshold = document.getElementById('modalThresholdInput').value;
+
+        // Use the Fetch API to send data to the backend
+        fetch('/api/update_inventory', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                inventory_id: inventoryId,
+                quantity: newQuantity,
+                threshold: newThreshold
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Update the table cell without a page reload
+                currentCell.textContent = data.new_quantity;
+                currentCell.setAttribute('data-quantity', data.new_quantity);
+                currentCell.setAttribute('data-threshold', data.new_threshold)
+
+                const quantity = parseInt(data.new_quantity);
+                const threshold = parseInt(data.new_threshold);
+
+                if (quantity <= threshold) {
+                    currentCell.classList.add('bg-warning');
+                } else {
+                    currentCell.classList.remove('bg-warning');
+                }
+
+                const row = currentCell.closest('tr');
+                let isRowAlert = false;
+                row.querySelectorAll('.editable-cell').forEach(cell => {
+                    const q = parseInt(cell.getAttribute('data-quantity'));
+                    const t = parseInt(cell.getAttribute('data-threshold'));
+                    if (q <= t) {
+                        isRowAlert = true;
+                    }
+                })
+
+                if (isRowAlert) {
+                    row.classList.add('table-danger');
+                } else {
+                    row.classList.remove('table-danger')
+                }
+                
+                // Close the modal
+                const modalInstance = bootstrap.Modal.getInstance(editModal);
+                modalInstance.hide();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+});
+</script>
+{% endblock %}

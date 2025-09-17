@@ -20,14 +20,6 @@
                     <span class="error-msg">[{{ error }}]</span>
                 {% endfor %}
             </div>
-            <div class="mb-3">
-                {{ form.stock_quantity.label(class="form-label") }}<br>
-                {{ form.stock_quantity(class="form-control") }}
-                {% for error in form.stock_quantity.errors %}
-                    <span class="error-msg">[{{ error }}]</span>
-                {% endfor %}
-            </div>
-
             <div class="form-submit-area mb-3">
                 {{ form.submit(class="submit-btn")}}
             </div>
