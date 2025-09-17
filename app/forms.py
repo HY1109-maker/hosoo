@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, HiddenField, IntegerField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Optional, NumberRange
-from app.models import User # --- Userモデルをインポート ---
+from app.models import User, Product # --- Userモデルをインポート ---
 
 class LoginForm(FlaskForm):
     username = StringField('ユーザー名', validators=[DataRequired()])
@@ -36,3 +36,8 @@ class ProductForm(FlaskForm):
     name = StringField('品名', validators=[DataRequired()])
     stock_quantity = IntegerField('在庫数', validators=[DataRequired(), NumberRange(min=0)])
     submit = SubmitField('保存')
+
+    def validate_item_number(self, item_number):
+        product = Product.query.filter_by(item_number=item_number.data).first()
+        if product is not None:
+            raise ValidationError('この品番は既に使用されています。別の品番に変更してください。')

@@ -52,12 +52,22 @@ def register():
 @main.route('/products')
 @login_required
 def products():
-    return render_template('products.html', title='Products')
+    all_products = Product.query.order_by(Product.name).all()
+    print("--- /products ページが読み込まれました ---")
+    print(f"データベースから取得した商品リスト: {all_products}")
+    return render_template('products.html', title='Products', products=all_products)
 
 @main.route('/route/add', methods=['GET', 'POST'])
 @login_required
 def add_product():
     form = ProductForm()
+
+     # --- ▼▼▼ デバッグコードを追加 ▼▼▼ ---
+    if request.method == 'POST':
+        print("--- フォームがPOSTされました ---")
+        print(f"バリデーション結果: {form.validate_on_submit()}")
+        print(f"フォームのエラー内容: {form.errors}")
+
     if form.validate_on_submit():
         new_product = Product(
             item_number=form.item_number.data,
@@ -73,7 +83,7 @@ def add_product():
 
 @main.route('/edit_product/<int:product_id>', methods=['GET','POST'])
 @login_required
-def edti_product(product_id):
+def edit_product(product_id):
     product = Product.query.get_or_404(product_id)
     form = ProductForm()
     if form.validate_on_submit():
