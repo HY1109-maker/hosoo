@@ -1,0 +1,9 @@
+在庫アラート サマリーレポート
+
+本日時点で、以下の商品の在庫が設定された閾値を下回っています。
+
+{% for item in items %}
+- 店舗: {{ item.store.name }} | 商品名: {{ item.product.name }} ({{ item.product.item_number }}) | 現在庫数: {{ item.quantity }} | 閾値: {{ item.threshold }}
+{% endfor %}
+
+速やかに在庫の確認と発注を行ってください。

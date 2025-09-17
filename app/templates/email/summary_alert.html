@@ -1,0 +1,25 @@
+<h3>在庫アラート サマリーレポート</h3>
+<p>本日時点で、以下の商品の在庫が設定された閾値を下回っています。</p>
+<table border="1" cellpadding="5" cellspacing="0">
+    <thead>
+        <tr>
+            <th>店舗</th>
+            <th>商品名</th>
+            <th>品番</th>
+            <th>現在庫数</th>
+            <th>閾値</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.store.name }}</td>
+            <td>{{ item.product.name }}</td>
+            <td>{{ item.product.item_number }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.threshold }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p>速やかに在庫の確認と発注を行ってください。</p>
