@@ -12,3 +12,7 @@ db.sqlite
 
 # 環境変数を格納するファイル (機密情報を含む場合)
 .flaskenv
+
+# ▼▼▼ Google OAuthの秘密鍵を追加 ▼▼▼
+client_secret.json
+token.json
