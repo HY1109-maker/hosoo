@@ -7,6 +7,7 @@ from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, 
 import pandas as pd
 import os
 import chardet
+from .decorators import admin_required
 
 main = Blueprint('main', __name__)
 
@@ -274,12 +275,6 @@ def bill():
 def sails():
     return render_template('sails_index.html', title='Sails')
 
-@main.route('/')
-@login_required
-def user_profile():
-    return render_template('user_profile.html', title='Sails')
-
-
 @main.route('/api/update_inventory', methods=['POST'])
 @login_required
 def update_inventory():
@@ -338,6 +333,7 @@ def update_inventory():
 
 @main.route('/import_data', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def import_data():
     form = CsvUploadForm()
     if form.validate_on_submit():
@@ -404,3 +400,9 @@ def import_data():
         return redirect(url_for('main.products'))
     
     return render_template('import_data.html', title='データインポート', form=form)
+
+@main.route('/user/<username>')
+@login_required
+def user_profile(username):
+    user = User.query.filter_by(username=username).first()
+    return render_template('user_profile.html', user=user)

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>プロフィール: {{ user.username }}</h2>
+        </div>
+        <div class="card-body">
+            <p><strong>ユーザー名:</strong> {{ user.username }}</p>
+            <p><strong>メールアドレス:</strong> {{ user.email }}</p>
+            <p><strong>役割:</strong> {{ user.role }}</p>
+            {% if user.store_id %}
+                <p><strong>所属店舗:</strong> {{ user.store.name }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
