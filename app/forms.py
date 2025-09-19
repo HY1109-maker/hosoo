@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, IntegerField, HiddenField, FieldList, FormField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Optional, NumberRange
 from app.models import User, Product, Store, Inventory # --- Userモデルをインポート ---
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 
 class LoginForm(FlaskForm):
     username = StringField('ユーザー名', validators=[DataRequired()])
@@ -64,3 +65,11 @@ class InventoryEntryForm(FlaskForm):
 class AllocateInventoryForm(FlaskForm):
     inventories = FieldList(FormField(InventoryEntryForm))
     submit = SubmitField('全店舗の在庫を保存')
+
+class CsvUploadForm(FlaskForm):
+    csv_file = FileField('CSV/Excelファイル', validators=[
+        FileRequired(),
+        FileAllowed(['csv', 'xlsx'], 'CSVまたはExcelファイルを選択してください')
+    ])
+
+    submit = SubmitField('データをインポート')

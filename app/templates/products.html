@@ -58,11 +58,25 @@
                                 data-threshold="{{ inventory_info.threshold }}"
                                 data-product-name="{{ data.product.name }}"
                                 data-store-name="{{ store.name }}"
+                                data-product-id="{{ data.product.id }}"
+                                data-store-id="{{ store.id }}"
                                 style="cursor: pointer;">
                                 {{ inventory_info.quantity }}
                             </td>
                         {% else %}
-                            <td class="text-center">-</td>
+                            <td class="editable-cell text-center text-muted"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#editInventoryModal"
+                                data-inventory-id="new"
+                                data-quantity="0"
+                                data-threshold="10"
+                                data-product-name="{{ data.product.name }}"
+                                data-store-name="{{ store.name }}"
+                                data-product-id="{{ data.product.id }}"
+                                data-store-id="{{ store.id }}"
+                                style="cursor: pointer;">
+                                -
+                            </td>
                         {% endif %}
                     {% endfor %}
 
@@ -111,27 +125,25 @@
 {% endblock %}
 
 
-{# All your JavaScript goes in the scripts block #}
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const editModal = document.getElementById('editInventoryModal');
     const saveBtn = document.getElementById('saveInventoryBtn');
     
-    let currentCell; // Variable to hold the cell that was clicked
+    let currentCell; // クリックされたセルを保持する変数
 
-    // Event listener for when the modal is about to be shown
+    // モーダルが表示される直前のイベント (変更なし)
     editModal.addEventListener('show.bs.modal', function (event) {
         const cell = event.relatedTarget;
         currentCell = cell;
 
         const inventoryId = cell.getAttribute('data-inventory-id');
         const quantity = cell.getAttribute('data-quantity');
-        const threshold = cell.getAttribute('data-threshold')
+        const threshold = cell.getAttribute('data-threshold');
         const productName = cell.getAttribute('data-product-name');
         const storeName = cell.getAttribute('data-store-name');
 
-        // Update the modal's content
         editModal.querySelector('#modalProductName').textContent = productName;
         editModal.querySelector('#modalStoreName').textContent = storeName;
         editModal.querySelector('#modalInventoryId').value = inventoryId;
@@ -139,32 +151,44 @@ document.addEventListener('DOMContentLoaded', function () {
         editModal.querySelector('#modalThresholdInput').value = threshold;
     });
 
-    // Event listener for the save button click
+    // 保存ボタンがクリックされた時のイベント
     saveBtn.addEventListener('click', function () {
         const inventoryId = document.getElementById('modalInventoryId').value;
         const newQuantity = document.getElementById('modalQuantityInput').value;
         const newThreshold = document.getElementById('modalThresholdInput').value;
 
-        // Use the Fetch API to send data to the backend
+        let payload = {
+            inventory_id: inventoryId,
+            quantity: newQuantity,
+            threshold: newThreshold
+        };
+
+        if (inventoryId === "new") {
+            payload.product_id = currentCell.getAttribute('data-product-id');
+            payload.store_id = currentCell.getAttribute('data-store-id');
+        }
+
         fetch('/api/update_inventory', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                inventory_id: inventoryId,
-                quantity: newQuantity,
-                threshold: newThreshold
-            })
+            // --- ▼▼▼ ここが最重要修正点！ { } を削除 ▼▼▼ ---
+            body: JSON.stringify(payload)
         })
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                // Update the table cell without a page reload
                 currentCell.textContent = data.new_quantity;
-                currentCell.setAttribute('data-quantity', data.new_quantity);
-                currentCell.setAttribute('data-threshold', data.new_threshold)
 
+                currentCell.setAttribute('data-inventory-id', data.inventory_id);
+                currentCell.setAttribute('data-quantity', data.new_quantity);
+                currentCell.setAttribute('data-threshold', data.new_threshold);
+                
+                // --- ▼▼▼ もう一つの修正点！ 'text-muted' クラスを正しく削除 ▼▼▼ ---
+                currentCell.classList.remove('text-muted');
+
+                // アラート表示の更新ロジック (変更なし)
                 const quantity = parseInt(data.new_quantity);
                 const threshold = parseInt(data.new_threshold);
 
@@ -179,22 +203,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 row.querySelectorAll('.editable-cell').forEach(cell => {
                     const q = parseInt(cell.getAttribute('data-quantity'));
                     const t = parseInt(cell.getAttribute('data-threshold'));
-                    if (q <= t) {
+                    // isNaNチェックを追加して、'-'などの非数値セルをスキップ
+                    if (!isNaN(q) && !isNaN(t) && q <= t) {
                         isRowAlert = true;
                     }
-                })
+                });
 
                 if (isRowAlert) {
                     row.classList.add('table-danger');
                 } else {
-                    row.classList.remove('table-danger')
+                    row.classList.remove('table-danger');
                 }
                 
-                // Close the modal
+                // モーダルを閉じる
                 const modalInstance = bootstrap.Modal.getInstance(editModal);
                 modalInstance.hide();
             } else {
-                alert('Error: ' + data.message);
+                alert('エラー: ' + data.message);
             }
         })
         .catch(error => console.error('Error:', error));

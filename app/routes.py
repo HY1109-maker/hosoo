@@ -1,8 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from werkzeug.utils import secure_filename
 from flask_login import login_user, logout_user, login_required, current_user
 from .models import User, Product, Store, Inventory, InventoryLog
 from . import db
-from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm
+from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm
+import pandas as pd
+import os
+import chardet
 
 main = Blueprint('main', __name__)
 
@@ -281,44 +285,122 @@ def user_profile():
 def update_inventory():
     data = request.get_json()
     inventory_id = data.get('inventory_id')
-    new_quantity_str = data.get('quantity')
-    new_threshold_str = data.get('threshold')
+    new_quantity = int(data.get('quantity', 0)) # 数値に変換
+    new_threshold = int(data.get('threshold', 10)) # 数値に変換
 
-    # 入力値のバリデーション
-    if inventory_id is None or new_quantity_str is None or new_threshold_str is None:
-        return jsonify({'status': 'error', 'message': '無効なデータです'}), 400
+    # --- ▼▼▼ 新規作成と更新のロジックを分岐 ▼▼▼ ---
     
-    try:
-        # 文字列を数値(integer)に変換する
-        new_quantity = int(new_quantity_str)
-        new_threshold = int(new_threshold_str)
-    except (ValueError, TypeError):
-        # もし数値に変換できない文字（例: "abc"）が送られてきたらエラーを返す
-        return jsonify({'status': 'error', 'message': '数量と閾値は数値で入力してください'}), 400
-    
-    
-    inventory = Inventory.query.get(inventory_id)
-    if not inventory:
-        return jsonify({'status': 'error', 'message': '在庫が見つかりません'}), 404
+    # --- A: 新規作成の場合 ---
+    if inventory_id == 'new':
+        product_id = data.get('product_id')
+        store_id = data.get('store_id')
+        if not all([product_id, store_id]):
+            return jsonify({'status': 'error', 'message': '商品または店舗IDがありません'}), 400
 
-    # ログ記録と在庫更新（edit_inventoryからロジックを再利用）
-    quantity_before = inventory.quantity
-    log_entry = InventoryLog(
-        inventory=inventory,
-        user=current_user,
-        quantity_before=quantity_before,
-        quantity_after=new_quantity
-    )
-    db.session.add(log_entry)
-    
-    inventory.quantity = new_quantity
-    inventory.threshold = new_threshold
+        # 新しい在庫レコードを作成
+        inventory = Inventory(
+            product_id=product_id,
+            store_id=store_id,
+            quantity=new_quantity,
+            threshold=new_threshold
+        )
+        db.session.add(inventory)
+        db.session.commit() # コミットしてinventory.idを確定させる
+        
+        # ログは新規作成なので「0から」として記録
+        log_entry = InventoryLog(inventory=inventory, user=current_user, quantity_before=0, quantity_after=new_quantity)
+        db.session.add(log_entry)
+
+    # --- B: 既存の在庫を更新する場合 ---
+    else:
+        inventory = Inventory.query.get(int(inventory_id))
+        if not inventory:
+            return jsonify({'status': 'error', 'message': '在庫が見つかりません'}), 404
+        
+        # ログ記録
+        quantity_before = inventory.quantity
+        log_entry = InventoryLog(inventory=inventory, user=current_user, quantity_before=quantity_before, quantity_after=new_quantity)
+        db.session.add(log_entry)
+        
+        # 在庫更新
+        inventory.quantity = new_quantity
+        inventory.threshold = new_threshold
 
     db.session.commit()
 
     return jsonify({
         'status': 'success',
         'message': '在庫が更新されました',
-        'new_quantity': new_quantity,
-        'new_threshold': new_threshold
+        'inventory_id': inventory.id, # ★新しいIDを返す
+        'new_quantity': inventory.quantity,
+        'new_threshold': inventory.threshold
     })
+
+@main.route('/import_data', methods=['GET', 'POST'])
+@login_required
+def import_data():
+    form = CsvUploadForm()
+    if form.validate_on_submit():
+        f = form.csv_file.data
+        filename = secure_filename(f.filename)
+        filepath = os.path.join(current_app.instance_path, 'uploads', filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        f.save(filepath)
+
+        try:
+            # --- ▼▼▼ ここからが新しいロジック ▼▼▼ ---
+            if filename.endswith(('.xlsx', '.xlsm')): # .xlsxにも対応
+                df = pd.read_excel(filepath)
+            else:
+                # 2. chardetで文字コードを自動検出
+                with open(filepath, 'rb') as rawdata:
+                    result = chardet.detect(rawdata.read())
+                
+                detected_encoding = result['encoding']
+                print(f"Detected encoding: {detected_encoding}") # ターミナルで確認用
+
+                # 3. 検出したエンコーディングでファイルを読み込む
+                df = pd.read_csv(filepath, encoding=detected_encoding, on_bad_lines='warn')
+            # --- ▲▲▲ 新しいロジックここまで ▲▲▲ ---
+
+            # --- ▼▼▼ データベース処理のロジック (変更なし) ▼▼▼ ---
+            updated_count = 0
+            created_count = 0
+
+            for index, row in df.iterrows():
+                if not all(k in row for k in ['品番', '店舗名', '在庫数']):
+                    flash('CSVのヘッダーに「品番」「店舗名」「在庫数」が含まれている必要があります', 'danger')
+                    return redirect(url_for('main.import_data'))
+                
+                store = Store.query.filter_by(name=row['店舗名']).first()
+                if not store:
+                    store = Store(name=row['店舗名'])
+                    db.session.add(store)
+
+                product = Product.query.filter_by(item_number=row['品番']).first()
+                if not product:
+                    if '商品名' not in row:
+                        flash(f"新しい品番 {row['品番']}には「商品名」が必要です", 'danger')
+                        continue
+                    product = Product(item_number=row['品番'], name=row['商品名'])
+                    db.session.add(product)
+
+                inventory = Inventory.query.filter_by(product=product, store=store).first()
+                if inventory:
+                    inventory.quantity = int(row['在庫数'])
+                    updated_count += 1
+                else:
+                    inventory = Inventory(product=product, store=store, quantity=int(row['在庫数']))
+                    db.session.add(inventory)
+                    created_count += 1
+            
+            db.session.commit()
+            flash(f'インポート完了！ {created_count}件の新規在庫を登録し、{updated_count}件の在庫を更新しました。', 'success')
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'インポート中にエラーが発生しました : {e}', 'danger')
+        
+        return redirect(url_for('main.products'))
+    
+    return render_template('import_data.html', title='データインポート', form=form)
