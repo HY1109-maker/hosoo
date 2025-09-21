@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, IntegerField, HiddenField, FieldList, FormField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, IntegerField, HiddenField, FieldList, FormField, SelectField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Optional, NumberRange
 from app.models import User, Product, Store, Inventory # --- Userモデルをインポート ---
 from flask_wtf.file import FileField, FileRequired, FileAllowed
@@ -73,3 +73,26 @@ class CsvUploadForm(FlaskForm):
     ])
 
     submit = SubmitField('データをインポート')
+
+class AdminEditProfileForm(FlaskForm):
+    username = StringField('ユーザー名', validators=[DataRequired()], render_kw={'readonly': True})
+    email = StringField('メールアドレス', validators=[DataRequired(), Email()])
+    role = SelectField('役職', choices=[
+        ('staff', 'スタッフ'),
+        ('manager', 'マネージャー'),
+        ('admin', '管理者')
+    ], validators=[DataRequired()])
+    store = SelectField('所属店舗', coerce=int)
+    submit = SubmitField('更新')
+
+    def __init__(self, user, *args, **kwargs):
+        super(AdminEditProfileForm, self).__init__(*args, **kwargs)
+        self.store.choices = [(s.id, s.name) for s in Store.query.order_by('name').all()]
+        self.store.choices.insert(0, (0, '---未所属---'))
+        self.user = user
+
+    def validate_email(self, email):
+        if email.data != self.user.email:
+            user = User.query.filter_by(email=email.data).first()
+            if user:
+                raise ValidationError('このメールアドレスは既に使用されています')

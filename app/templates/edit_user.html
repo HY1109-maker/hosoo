@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>ユーザー情報の編集</h2>
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{form.username.label(class="form-label")}}
+                    {{form.username(class="form-content")}}
+                </div>
+                <div class="mb-3">
+                    {{form.email.lable(class="form-label")}}
+                    {{form.email(class="form-content")}}
+                    {% for error in form.email.erros %}
+                        <span class="text-dager">[{{ error }}]</span>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{form.role.label(class="form-label")}}
+                    {{form.role(class="form-content")}}
+                </div>
+                <div class="mb-3">
+                    {{form.store.label(class="form-label")}}
+                    {{form.store(class="form-content")}}
+                </div>
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('main.manage_user') }}" class="btn btn-secondary">キャンセル</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

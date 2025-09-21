@@ -3,7 +3,7 @@ from werkzeug.utils import secure_filename
 from flask_login import login_user, logout_user, login_required, current_user
 from .models import User, Product, Store, Inventory, InventoryLog
 from . import db
-from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm
+from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm, AdminEditProfileForm
 import pandas as pd
 import os
 import chardet
@@ -406,3 +406,37 @@ def import_data():
 def user_profile(username):
     user = User.query.filter_by(username=username).first()
     return render_template('user_profile.html', user=user)
+
+
+@main.route('/admin/users')
+@login_required
+@admin_required
+def manage_users():
+    users = User.query.order_by(User.username).all()
+    return render_template('manage_users.html', users=users)
+
+@main.route('/admin/edit_user/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_user(user_id):
+    user = User.query.filter_by(user_id)
+    form = AdminEditProfileForm()
+
+    if form.validate_on_submit():
+        user.email = form.email.data
+        user.role = form.role.data
+        user.store_id = form.store.data if form.store.data != 0 else None
+        db.session.commit()
+        flash('ユーザー情報が更新されました')
+        return redirect(url_for('main.manage_users'))
+    
+    elif request.method =='GET':
+        form.username.data = user.username
+        form.email.data = user.email
+        form.role.data = user.role
+        form.store.data = user.store_id if user.store_id else 0
+
+    return render_template('edit_user.html', form=form, user=user)
+
+
+
