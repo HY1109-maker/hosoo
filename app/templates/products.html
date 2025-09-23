@@ -82,7 +82,20 @@
 
                     <td>{{ data.last_updated.strftime('%Y-%m-%d %H:%M') if data.last_updated else 'N/A' }}</td>
                     <td>
-                        <a href="#" class="btn btn-secondary btn-sm">詳細</a>
+                        <div class="dropdown">
+                            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                操作
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">商品マスター編集</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form action="#" method="POST" onsubmit="return confirm('この商品を全ての店舗から削除します。よろしいですか？');">
+                                        <button type="submit" class="dropdown-item text-danger">商品マスター削除</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
                     </td>
                 </tr>
             {% else %}
@@ -118,6 +131,9 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
         <button type="button" class="btn btn-primary" id="saveInventoryBtn">変更を保存</button>
+        <form id="deleteInventoryForm" method="POST" class="me-auto">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('この在庫情報を完全に削除します。よろしいですか？');">削除</button>
+        </form>
       </div>
     </div>
   </div>
@@ -145,6 +161,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const threshold = cell.getAttribute('data-threshold');
         const productName = cell.getAttribute('data-product-name');
         const storeName = cell.getAttribute('data-store-name');
+        const deleteForm = document.getElementById('deleteInventoryForm');
+        if (inventoryId && inventoryId !== 'new') {
+            deleteForm.action = `/delete_inventory/${inventoryId}`;
+            deleteForm.style.display = 'block'; // 既存在庫の場合のみ表示
+        } else {
+            deleteForm.style.display = 'none'; // 新規登録の場合は非表示
+        }
 
         editModal.querySelector('#modalProductName').textContent = productName;
         editModal.querySelector('#modalStoreName').textContent = storeName;

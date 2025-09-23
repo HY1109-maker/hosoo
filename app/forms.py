@@ -101,3 +101,15 @@ class AdminEditProfileForm(FlaskForm):
             user = User.query.filter_by(email=email.data).first()
             if user:
                 raise ValidationError('このメールアドレスは既に使用されています。')
+            
+class StoreForm(FlaskForm):
+    name = StringField('店舗名', validators=[DataRequired()])
+    address = StringField('住所')
+    submit = SubmitField('保存')
+
+    def validate_name(self, name):
+        store = Store.query.filter_by(name=name.data).first()
+        if store:
+            raise ValidationError('この店舗名は既に使用されています。')
+        
+        

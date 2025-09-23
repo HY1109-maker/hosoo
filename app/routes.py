@@ -3,7 +3,7 @@ from werkzeug.utils import secure_filename
 from flask_login import login_user, logout_user, login_required, current_user
 from .models import User, Product, Store, Inventory, InventoryLog
 from . import db
-from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm, AdminEditProfileForm
+from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm, AdminEditProfileForm, StoreForm
 import pandas as pd
 import os
 import chardet
@@ -283,12 +283,18 @@ def update_inventory():
     new_quantity = int(data.get('quantity', 0)) # 数値に変換
     new_threshold = int(data.get('threshold', 10)) # 数値に変換
 
-    # --- ▼▼▼ 新規作成と更新のロジックを分岐 ▼▼▼ ---
-    
+    if current_user.role not in ['admin', 'manager']:
+        return jsonify({'status': 'error', 'message': 'この操作を行う権限がありません'}), 403 # 403: Forbidden
+
+    data = request.get_json()
+
     # --- A: 新規作成の場合 ---
     if inventory_id == 'new':
         product_id = data.get('product_id')
         store_id = data.get('store_id')
+
+        if current_user.role == 'manager' and current_user.store_id != store_id:
+            return jsonify({'status': 'error', 'message': '所属ストア以外の在庫は作成できません'})
         if not all([product_id, store_id]):
             return jsonify({'status': 'error', 'message': '商品または店舗IDがありません'}), 400
 
@@ -309,6 +315,8 @@ def update_inventory():
     # --- B: 既存の在庫を更新する場合 ---
     else:
         inventory = Inventory.query.get(int(inventory_id))
+        if current_user.role == 'manager' and current_user.store_id != inventory.store_id:
+            return jsonify({'status': 'error', 'message': '所属ストア以外の在庫は編集できません'}), 403
         if not inventory:
             return jsonify({'status': 'error', 'message': '在庫が見つかりません'}), 404
         
@@ -438,6 +446,45 @@ def edit_user(user_id):
         form.username.data = user.username
 
     return render_template('edit_user.html', form=form, user=user)
+
+@main.route('/admin/stores', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_stores():
+    form = StoreForm()
+
+    if form.validate_on_submit():
+        store = Store(name = form.name.data, address = form.address.data)
+        db.session.add(store)
+        db.session.commit()
+        flash('新しいストアが登録されました')
+        return redirect(url_for('main.manage_stores'))
+    
+    stores = Store.query.order_by('name').all()
+    return render_template('manage_stores.html', stores=stores, form=form)
+
+@main.route('/delete_inventory/<int:inventory_id>', methods=['POST'])
+@login_required
+def delete_inventory(inventory_id):
+    if current_user.role not in ['admin', 'manager']:
+        flash('この操作を行う権限がありません', 'danger')
+        return redirect(url_for('main.products'))
+    
+    inventory = Inventory.query.get_or_404(inventory_id)
+    
+    if current_user.role == 'manager' and current_user.store_id != inventory.store_id:
+        flash('所属ストア以外の在庫の削除はできません', 'danger')
+        return redirect(url_for('main.products'))
+    
+    product_name = inventory.product.name
+    store_name = inventory.store.name
+    
+    db.session.delete(inventory)
+    db.session.commit()
+    flash(f'{product_name}の在庫情報 {store_name}が削除されました')
+    return redirect(url_for('main.products'))
+
+
 
 
 

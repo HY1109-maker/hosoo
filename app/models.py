@@ -58,7 +58,7 @@ class Inventory(db.Model):
     store = db.relationship('Store', back_populates='inventories')
     store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
     # ▼▼▼ 在庫からログを参照するためのリレーションシップを追加 ▼▼▼
-    inventory_logs = db.relationship('InventoryLog', back_populates='inventory', lazy='dynamic')
+    inventory_logs = db.relationship('InventoryLog', back_populates='inventory', lazy='dynamic', cascade="all, delete-orphan")
 
 # --- ▼▼▼ InventoryLogモデルを修正 ▼▼▼ ---
 class InventoryLog(db.Model):
