@@ -77,22 +77,27 @@ class CsvUploadForm(FlaskForm):
 class AdminEditProfileForm(FlaskForm):
     username = StringField('ユーザー名', validators=[DataRequired()], render_kw={'readonly': True})
     email = StringField('メールアドレス', validators=[DataRequired(), Email()])
-    role = SelectField('役職', choices=[
+    # 役割を選択するためのドロップダウンリスト
+    role = SelectField('役割', choices=[
         ('staff', 'スタッフ'),
         ('manager', 'マネージャー'),
         ('admin', '管理者')
     ], validators=[DataRequired()])
+    # 所属店舗を選択するためのドロップダウンリスト
     store = SelectField('所属店舗', coerce=int)
     submit = SubmitField('更新')
 
     def __init__(self, user, *args, **kwargs):
         super(AdminEditProfileForm, self).__init__(*args, **kwargs)
+        # 店舗の選択肢を動的に設定
         self.store.choices = [(s.id, s.name) for s in Store.query.order_by('name').all()]
-        self.store.choices.insert(0, (0, '---未所属---'))
+        # 「未所属」の選択肢を追加
+        self.store.choices.insert(0, (0, '--- 未所属 ---'))
         self.user = user
 
+    # 自分以外のユーザーで、メールアドレスが既に使われていないかチェック
     def validate_email(self, email):
         if email.data != self.user.email:
             user = User.query.filter_by(email=email.data).first()
             if user:
-                raise ValidationError('このメールアドレスは既に使用されています')
+                raise ValidationError('このメールアドレスは既に使用されています。')

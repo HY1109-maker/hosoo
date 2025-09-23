@@ -12,7 +12,7 @@
                     {{form.username(class="form-content")}}
                 </div>
                 <div class="mb-3">
-                    {{form.email.lable(class="form-label")}}
+                    {{form.email.label(class="form-label")}}
                     {{form.email(class="form-content")}}
                     {% for error in form.email.erros %}
                         <span class="text-dager">[{{ error }}]</span>
@@ -27,7 +27,7 @@
                     {{form.store(class="form-content")}}
                 </div>
                 {{ form.submit(class="btn btn-primary") }}
-                <a href="{{ url_for('main.manage_user') }}" class="btn btn-secondary">キャンセル</a>
+                <a href="{{ url_for('main.manage_users') }}" class="btn btn-secondary">キャンセル</a>
             </form>
         </div>
     </div>

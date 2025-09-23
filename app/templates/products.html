@@ -126,6 +126,8 @@
 
 
 {% block scripts %}
+{{ super() }}
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const editModal = document.getElementById('editInventoryModal');

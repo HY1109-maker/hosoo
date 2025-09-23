@@ -1,102 +1,48 @@
-html {
-  font-size: 62.5%;
+html, body {
+    height: 100%;
+    margin: 0;
 }
 
-body {
-    margin: 0 4%;
-    font-family: 'Noto serif JP', 'Times New Roman', serif;
-    background-color: #f0f2f5; /* 少し背景色をつけます */
-    font-size: 1.6rem;
-    line-height: 1.5;
-    padding-bottom: 70px; /* for bottom nav */
+#wrapper {
+    min-height: 100vh; /* ビューポートの高さいっぱいに広げる */
 }
 
-h1 {
-  font-size: clamp(2.4rem, 5vw, 4.8rem);
+.sidebar-container {
+    width: 250px; /* サイドバーの幅を固定 */
+    transition: width 0.25s ease-out; /* アニメーションを追加 */
+    flex-shrink: 0; /* ウィンドウが縮んでもサイドバーの幅を維持 */
 }
 
-h2 {
-  font-size: clamp(2.0rem, 3vw, 3.2rem);
+.page-content-wrapper {
+    flex-grow: 1; /* 残りの幅をすべてメインコンテンツが使用 */
+    min-width: 0; /* flexアイテムが縮むのを許可 */
+    overflow-y: auto; /* コンテンツが多い場合はスクロール */
 }
 
-p {
-  font-size: 1.6rem;
+/* アイコンの幅を揃えるための設定 */
+.sidebar-container .list-group-item i.fa-fw {
+    width: 1.25em;
 }
 
-a {
-    display: block;
-    font-size: clamp(0.1rem, 3vw, 1.2rem);
+/* style.css */
+
+/* サイドバーのメニュー項目に余白を追加 */
+.sidebar-container .list-group-item {
+    padding: 1rem 1.25rem;
 }
 
-/* Header Styles */
-.header-box {
-    display: flex;
-    padding-top: 2px;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgb(169, 169, 169);
+/* --- ▼▼▼ ここから下がサイドバー折りたたみ用のスタイル ▼▼▼ --- */
+
+
+#wrapper.sidebar-toggled .sidebar-container {
+    width: 4rem; /* 折りたたまれた時に幅をゼロにする */
 }
 
-.logo-placeholder {
-    width: 10rem;
+/* 折りたたまれた時に、メニューの文字を隠す */
+#wrapper.sidebar-toggled .sidebar-container .list-group-item span {
+    display: none;
 }
 
-.logo-placeholder img {
-    width: 100%;
-}
-
-.login-box {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-.login-box a {
-    display: block;
-    white-space: nowrap;
-    text-decoration: none;
-    color: black;
-}
-
-.bottom-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-/* header Navigation */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 60px;
-    background-color: #ffffff;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    border-top: 1px solid #e0e0e0;
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
-    z-index: 1000;
-}
-.nav-link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    color: #888;
-    font-size: 1rem;
-}
-.nav-icon {
-    width: 28px;
-    height: 28px;
-    margin-bottom: 2px;
-}
-.nav-link:hover {
-    color: #333;
-}
-
-.nav-link.active {
-    color: #262626; /* アクティブな時の色を濃くする */
-    font-weight: bold; /* 少し太字にするのも良い */
+#wrapper.sidebar-toggled .sidebar-container .list-group-item {
+    overflow: hidden; /* はみ出した文字を隠す */
 }

@@ -1,5 +1,31 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4"></div>
+<div class="container mt-4">
+    <h1>ユーザー管理</h1>
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>ユーザー名</th>
+                <th>メールアドレス</th>
+                <th>役割</th>
+                <th>所属店舗</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.role }}</td>
+                <td>{{ user.store.name if user.store_id else '未所属' }}</td>
+                <td>
+                    <a href="{{ url_for('main.edit_user', user_id=user.id) }}" class="btn btn-secondary btn-sm">編集</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

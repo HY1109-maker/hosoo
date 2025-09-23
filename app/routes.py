@@ -419,8 +419,8 @@ def manage_users():
 @login_required
 @admin_required
 def edit_user(user_id):
-    user = User.query.filter_by(user_id)
-    form = AdminEditProfileForm()
+    user = User.query.get_or_404(user_id)
+    form = AdminEditProfileForm(user=user)
 
     if form.validate_on_submit():
         user.email = form.email.data
@@ -430,11 +430,12 @@ def edit_user(user_id):
         flash('ユーザー情報が更新されました')
         return redirect(url_for('main.manage_users'))
     
-    elif request.method =='GET':
-        form.username.data = user.username
+    elif request.method == 'GET':
         form.email.data = user.email
         form.role.data = user.role
         form.store.data = user.store_id if user.store_id else 0
+        # usernameはreadonlyなので、表示用に設定は不要
+        form.username.data = user.username
 
     return render_template('edit_user.html', form=form, user=user)
 
