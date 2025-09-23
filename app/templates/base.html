@@ -23,6 +23,12 @@
                 <a href="{{ url_for('main.products') }}" class="list-group-item list-group-item-action bg-dark text-light">
                     <i class="fas fa-boxes-stacked fa-fw me-2"></i><span>在庫一覧</span>
                 </a>
+
+                {% if current_user.role in ['admin', 'manager'] %}
+                    <a href="{{ url_for('main.view_logs') }}" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-history fa-fw me-2"></i><span>操作ログ</span>
+                    </a>
+                {% endif %}
                 
                 {# 管理者(admin)だけに表示するメニュー #}
                 {% if current_user.is_authenticated and current_user.role == 'admin' %}

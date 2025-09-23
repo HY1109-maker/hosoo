@@ -484,6 +484,35 @@ def delete_inventory(inventory_id):
     flash(f'{product_name}の在庫情報 {store_name}が削除されました')
     return redirect(url_for('main.products'))
 
+@main.route('/logs')
+@login_required
+def view_logs():
+    # 権限チェック（管理者または店長のみ）
+    if current_user.role not in ['admin', 'manager']:
+        abort(403)
+
+    page = request.args.get('page', 1, type=int)
+    
+    # 店長の場合は、自分の店舗のログのみ表示
+    if current_user.role == 'manager':
+        # manager's store_id must exist
+        if not current_user.store_id:
+             return render_template('logs.html', pagination=None)
+        
+        # Get inventories for the manager's store
+        store_inventories = Inventory.query.filter_by(store_id=current_user.store_id).all()
+        inventory_ids = [inv.id for inv in store_inventories]
+        
+        pagination = InventoryLog.query.filter(InventoryLog.inventory_id.in_(inventory_ids)).order_by(InventoryLog.timestamp.desc()).paginate(
+            page=page, per_page=20, error_out=False
+        )
+    else: # 管理者の場合
+        pagination = InventoryLog.query.order_by(InventoryLog.timestamp.desc()).paginate(
+            page=page, per_page=20, error_out=False
+        )
+        
+    logs = pagination.items
+    return render_template('logs.html', logs=logs, pagination=pagination)
 
 
 
