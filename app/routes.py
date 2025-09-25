@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from werkzeug.utils import secure_filename
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Product, Store, Inventory, InventoryLog
+from .models import User, Product, Store, Inventory, InventoryLog, ProductLog
 from . import db
-from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm, AdminEditProfileForm, StoreForm
+from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm, AdminEditProfileForm, StoreForm, EditProductForm
 import pandas as pd
 import os
 import chardet
@@ -513,6 +513,57 @@ def view_logs():
         
     logs = pagination.items
     return render_template('logs.html', logs=logs, pagination=pagination)
+
+
+@main.route('/products_master')
+@login_required
+def products_master():
+    """商品マスタ一覧ページ"""
+    products = Product.query.order_by(Product.name).all()
+    return render_template('products_master.html', products=products)
+
+@main.route('/edit_product_master/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def edit_product_master(product_id):
+    # 権限チェック (マネージャー以上)
+    if current_user.role not in ['admin', 'manager']:
+        abort(403)
+        
+    product = Product.query.get_or_404(product_id)
+    form = EditProductForm(original_item_number=product.item_number)
+
+    if form.validate_on_submit():
+        # 変更前の値をログ用に保存
+        before_values = {
+            'item_number': product.item_number,
+            'name': product.name,
+        }
+        
+        # データベースを更新
+        product.item_number = form.item_number.data
+        product.name = form.name.data
+        product.price = form.price.data
+        product.cost = form.cost.data
+        
+        # 変更があった項目をログに記録
+        if before_values['item_number'] != product.item_number:
+            log = ProductLog(product=product, user=current_user, field_changed='品番', value_before=before_values['item_number'], value_after=product.item_number)
+            db.session.add(log)
+        if before_values['name'] != product.name:
+            log = ProductLog(product=product, user=current_user, field_changed='商品名', value_before=before_values['name'], value_after=product.name)
+            db.session.add(log)
+
+        db.session.commit()
+        flash('商品マスタ情報が更新されました。')
+        return redirect(url_for('main.products_master'))
+
+    elif request.method == 'GET':
+        form.item_number.data = product.item_number
+        form.name.data = product.name
+        form.price.data = product.price
+        form.cost.data = product.cost
+        
+    return render_template('edit_product_master.html', form=form, product=product)
 
 
 

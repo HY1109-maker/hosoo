@@ -28,6 +28,10 @@
                     <a href="{{ url_for('main.view_logs') }}" class="list-group-item list-group-item-action bg-dark text-light">
                         <i class="fas fa-history fa-fw me-2"></i><span>操作ログ</span>
                     </a>
+                    <a href="{{ url_for('main.products_master') }}" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-box-archive fa-fw me-2"></i><span>商品マスタ</span>
+                    </a>
+
                 {% endif %}
                 
                 {# 管理者(admin)だけに表示するメニュー #}
