@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, abort
 from werkzeug.utils import secure_filename
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Product, Store, Inventory, InventoryLog
+from .models import User, Product, Store, Inventory, InventoryLog, ProductLog
 from . import db
-from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm, AdminEditProfileForm, StoreForm
+from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm, AdminEditProfileForm, StoreForm, EditProductForm
 import pandas as pd
 import os
 import chardet
@@ -108,47 +108,6 @@ def products():
                            product_data=product_inventory_data,
                            selected_store_id=store_id_filter)
 
-
-
-# @main.route('/add_product', methods=['GET', 'POST'])
-# @login_required
-# def add_product():
-#     form = ProductForm()
-#     form.store.choices = [(s.id, s.name) for s in Store.query.order_by('name').all()]
-
-#     if form.validate_on_submit():
-#         # --- ▼▼▼ ロジックを全面的に書き換え ▼▼▼ ---
-        
-#         # 1. 品番で既存の商品を検索
-#         product = Product.query.filter_by(item_number=form.item_number.data).first()
-
-#         # 2. もし商品が存在しなければ、新しく作成
-#         if product is None:
-#             product = Product(item_number=form.item_number.data, name=form.name.data)
-#             db.session.add(product)
-#             flash(f'新しい商品「{product.name}」がマスタに登録されました。')
-
-#         # 3. 選択された店舗と商品の組み合わせで、在庫が既に存在しないかチェック
-#         store_id = form.store.data
-#         existing_inventory = Inventory.query.filter_by(product_id=product.id, store_id=store_id).first()
-        
-#         if existing_inventory:
-#             flash(f'エラー：「{product.name}」は既に「{existing_inventory.store.name}」の在庫として登録されています。', 'danger')
-#             return redirect(url_for('main.products'))
-
-#         # 4. 新しい在庫情報を作成
-#         inventory = Inventory(
-#             product=product,
-#             store_id=store_id,
-#             quantity=int(form.stock_quantity.data)
-#         )
-#         db.session.add(inventory)
-#         db.session.commit()
-        
-#         flash(f'「{product.name}」が「{inventory.store.name}」の在庫に登録されました。')
-#         return redirect(url_for('main.products'))
-
-#     return render_template('add_product.html', title='商品・在庫追加', form=form)
 
 @main.route('/add_product', methods=['GET', 'POST'])
 @login_required
@@ -483,6 +442,144 @@ def delete_inventory(inventory_id):
     db.session.commit()
     flash(f'{product_name}の在庫情報 {store_name}が削除されました')
     return redirect(url_for('main.products'))
+
+@main.route('/products_master')
+@login_required
+def products_master():
+    """商品マスタ一覧ページ"""
+    # 閲覧は全てのログインユーザーに許可
+    products = Product.query.order_by(Product.name).all() # 商品名を基準にソート
+    return render_template('products_master.html', products=products)
+
+
+@main.route('/edit_product_master/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def edit_product_master(product_id):
+    """商品マスタ編集ページ（マネージャー以上が編集可能）"""
+    # 権限チェック (管理者または店長のみ編集可能)
+    if current_user.role not in ['admin', 'manager']:
+        flash('商品マスタを編集する権限がありません。', 'danger')
+        abort(403) # 403 Forbiddenを返すか、products_masterにリダイレクト
+
+    product = Product.query.get_or_404(product_id)
+    form = EditProductForm(original_item_number=product.item_number) # 元の品番を渡してフォームを初期化
+
+    if form.validate_on_submit():
+        # 変更前の値をログ記録用に保持
+        before_values = {
+            'item_number': product.item_number,
+            'name': product.name,
+            'price': product.price,
+            'cost': product.cost
+        }
+        
+        # データベースを更新
+        product.item_number = form.item_number.data
+        product.name = form.name.data
+        product.price = form.price.data if form.price.data is not None else None # 空欄の場合はNoneを保存
+        product.cost = form.cost.data if form.cost.data is not None else None   # 空欄の場合はNoneを保存
+        
+        # 変更があった項目をProductLogに記録
+        if before_values['item_number'] != product.item_number:
+            log = ProductLog(product=product, user=current_user, field_changed='品番', 
+                             value_before=str(before_values['item_number']), value_after=str(product.item_number))
+            db.session.add(log)
+        if before_values['name'] != product.name:
+            log = ProductLog(product=product, user=current_user, field_changed='商品名', 
+                             value_before=str(before_values['name']), value_after=str(product.name))
+            db.session.add(log)
+        if before_values['price'] != product.price:
+            log = ProductLog(product=product, user=current_user, field_changed='販売価格', 
+                             value_before=str(before_values['price']), value_after=str(product.price))
+            db.session.add(log)
+        if before_values['cost'] != product.cost:
+            log = ProductLog(product=product, user=current_user, field_changed='原価', 
+                             value_before=str(before_values['cost']), value_after=str(product.cost))
+            db.session.add(log)
+
+        db.session.commit()
+        flash('商品マスタ情報が更新されました。', 'success') # flashメッセージに'success'カテゴリを付けて色分け
+        return redirect(url_for('main.products_master'))
+
+    elif request.method == 'GET':
+        # GETリクエストの場合、フォームに現在の値を設定
+        form.item_number.data = product.item_number
+        form.name.data = product.name
+        form.price.data = product.price
+        form.cost.data = product.cost
+        
+    return render_template('edit_product_master.html', form=form, product=product)
+
+@main.route('/admin/import_products_master', methods=['GET', 'POST'])
+@login_required
+@admin_required # 管理者のみがアクセス可能
+def import_products_master():
+    form = CsvUploadForm() # 既存のファイルアップロードフォームを使用
+
+    if form.validate_on_submit():
+        f = form.csv_file.data
+        filename = secure_filename(f.filename)
+        filepath = os.path.join(current_app.instance_path, 'uploads', filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        f.save(filepath)
+
+        try:
+            # ExcelまたはCSVファイルをPandasで読み込み
+            if filename.endswith(('.xlsx', '.xlsm')):
+                df = pd.read_excel(filepath)
+            else:
+                with open(filepath, 'rb') as rawdata:
+                    result = chardet.detect(rawdata.read()) # 文字コード自動検出
+                df = pd.read_csv(filepath, encoding=result['encoding'], on_bad_lines='warn')
+
+            updated_count = 0
+            created_count = 0
+
+            # 必須列のチェック
+            required_columns = ['品番', '商品名']
+            if not all(col in df.columns for col in required_columns):
+                flash(f'CSV/Excelファイルには「{", ".join(required_columns)}」の列が必要です。', 'danger')
+                return redirect(url_for('main.import_products_master'))
+
+            # 各行の商品データを処理
+            for index, row in df.iterrows():
+                item_number = str(row['品番']).strip() # 品番は文字列として扱い、前後空白を除去
+
+                # 品番で既存商品を検索
+                product = Product.query.filter_by(item_number=item_number).first()
+
+                if product:
+                    # 商品が存在すれば更新
+                    product.name = str(row['商品名']).strip()
+                    product.price = int(row['販売価格']) if '販売価格' in row and pd.notna(row['販売価格']) else None
+                    product.cost = int(row['原価']) if '原価' in row and pd.notna(row['原価']) else None
+                    updated_count += 1
+                else:
+                    # 商品が存在しなければ新規作成
+                    product = Product(
+                        item_number=item_number,
+                        name=str(row['商品名']).strip(),
+                        price=int(row['販売価格']) if '販売価格' in row and pd.notna(row['販売価格']) else None,
+                        cost=int(row['原価']) if '原価' in row and pd.notna(row['原価']) else None
+                    )
+                    db.session.add(product)
+                    created_count += 1
+
+            db.session.commit()
+            flash(f'商品マスタのインポートが完了しました。{created_count}件を新規登録し、{updated_count}件を更新しました。', 'success')
+            return redirect(url_for('main.products_master'))
+
+        except Exception as e:
+            db.session.rollback() # エラー時はロールバック
+            flash(f'インポート中にエラーが発生しました: {e}', 'danger')
+        finally:
+            # アップロードされたファイルを削除
+            if os.path.exists(filepath):
+                os.remove(filepath)
+        
+    return render_template('import_products_master.html', title='商品マスタインポート', form=form)
+
+
 
 
 

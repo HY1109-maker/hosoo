@@ -113,3 +113,24 @@ class StoreForm(FlaskForm):
             raise ValidationError('この店舗名は既に使用されています。')
         
         
+class EditProductForm(FlaskForm):
+    item_number = StringField('品番', validators=[DataRequired()])
+    name = StringField('商品名', validators=[DataRequired()])
+    price = IntegerField('販売価格', validators=[Optional(), NumberRange(min=0)]) # Optionalで未入力も許可
+    cost = IntegerField('原価', validators=[Optional(), NumberRange(min=0)])     # NumberRangeで0以上の整数を強制
+    submit = SubmitField('更新')
+
+    # 品番の重複チェックのための初期化
+    def __init__(self, original_item_number, *args, **kwargs):
+        super(EditProductForm, self).__init__(*args, **kwargs)
+        self.original_item_number = original_item_number # 元の品番を保持
+
+    # 品番が、自分以外の既存商品と重複していないかチェックするバリデータ
+    def validate_item_number(self, item_number):
+        if item_number.data != self.original_item_number: # 品番が変更された場合のみチェック
+            product = Product.query.filter_by(item_number=item_number.data).first()
+            if product:
+                raise ValidationError('この品番は既に使用されています。')
+            
+
+

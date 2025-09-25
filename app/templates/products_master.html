@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    {# --- ▼▼▼ ここを修正 ▼▼▼ --- #}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">商品マスタ管理</h1>
+        {# 管理者のみにインポートボタンを表示（この機能は後で作成） #}
+        {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('main.import_products_master') }}" class="btn btn-success">
+                <i class="fas fa-file-import me-2"></i>一括インポート
+            </a>
+        {% endif %}
+    </div>
+    {# --- ▲▲▲ 修正ここまで ▲▲▲ --- #}
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>品番</th>
+                <th>商品名</th>
+                <th>販売価格</th>
+                <th>原価</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>{{ product.item_number }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.price if product.price is not none else '未設定' }}</td>
+                <td>{{ product.cost if product.cost is not none else '未設定' }}</td>
+                <td>
+                    {# 管理者と店長のみ編集ボタンを表示 #}
+                    {% if current_user.role in ['admin', 'manager'] %}
+                        <a href="{{ url_for('main.edit_product_master', product_id=product.id) }}" class="btn btn-secondary btn-sm">編集</a>
+                    {% else %}
+                        <button class="btn btn-secondary btn-sm" disabled>編集</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center">商品マスタはまだ登録されていません。</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

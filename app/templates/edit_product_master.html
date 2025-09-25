@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>商品マスタ編集: {{ product.name }} (品番: {{ product.item_number }})</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.item_number.label(class="form-label") }}
+                    {{ form.item_number(class="form-control") }}
+                    {% for error in form.item_number.errors %}
+                        <span class="text-danger">[{{ error }}]</span>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control") }}
+                    {% for error in form.name.errors %}
+                        <span class="text-danger">[{{ error }}]</span>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ form.price.label(class="form-label") }}
+                    {{ form.price(class="form-control") }}
+                    {% for error in form.price.errors %}
+                        <span class="text-danger">[{{ error }}]</span>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ form.cost.label(class="form-label") }}
+                    {{ form.cost(class="form-control") }}
+                    {% for error in form.cost.errors %}
+                        <span class="text-danger">[{{ error }}]</span>
+                    {% endfor %}
+                </div>
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('main.products_master') }}" class="btn btn-secondary">キャンセル</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

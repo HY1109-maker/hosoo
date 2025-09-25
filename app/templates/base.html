@@ -23,11 +23,17 @@
                 <a href="{{ url_for('main.products') }}" class="list-group-item list-group-item-action bg-dark text-light">
                     <i class="fas fa-boxes-stacked fa-fw me-2"></i><span>在庫一覧</span>
                 </a>
+                <a href="{{ url_for('main.products_master') }}" class="list-group-item list-group-item-action bg-dark text-light">
+                    <i class="fas fa-box-archive fa-fw me-2"></i><span>商品マスタ</span>
+                </a>
                 
                 {# 管理者(admin)だけに表示するメニュー #}
                 {% if current_user.is_authenticated and current_user.role == 'admin' %}
                     <a href="{{ url_for('main.import_data') }}" class="list-group-item list-group-item-action bg-dark text-light">
                         <i class="fas fa-file-import fa-fw me-2"></i><span>データインポート</span>
+                    </a>
+                    <a href="{{ url_for('main.import_products_master') }}" class="list-group-item list-group-item-action bg-dark text-light">
+                        <i class="fas fa-file-import fa-fw me-2"></i><span>商品マスタインポート</span>
                     </a>
                     <a href="{{ url_for('main.manage_users') }}" class="list-group-item list-group-item-action bg-dark text-light">
                         <i class="fas fa-users-cog fa-fw me-2"></i><span>ユーザー管理</span>
