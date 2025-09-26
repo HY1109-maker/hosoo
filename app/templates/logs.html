@@ -17,11 +17,18 @@
         <tbody>
             {% for log in logs %}
             <tr>
-                <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>{{ log.timestamp.strftime('%Y/%m/%d %H:%M') }}</td>
                 <td>{{ log.user.username }}</td>
                 <td>{{ log.inventory.store.name }}</td>
                 <td>{{ log.inventory.product.name }}</td>
-                <td>在庫数を <strong>{{ log.quantity_before }}</strong> から <strong>{{ log.quantity_after }}</strong> に変更</td>
+                {% if log.quantity_before != log.quantity_after and log.threshold_before != log.threshold_after %}
+                    <td>在庫数 : <strong>{{ log.quantity_before }}</strong> → <strong>{{ log.quantity_after }}</strong> </br>
+                        閾値 : <strong>{{ log.threshold_before }}</strong> → <strong>{{ log.threshold_after }}</strong></td>
+                {% elif log.quantity_before != log.quantity_after and log.threshold_before == log.threshold_after %}
+                    <td>在庫数 : <strong>{{ log.quantity_before }}</strong> → <strong>{{ log.quantity_after }}</strong></td>
+                {% elif log.quantity_before == log.quantity_after and log.threshold_before != log.threshold_after %}
+                    <td>閾値 : <strong>{{ log.threshold_before }}</strong> → <strong>{{ log.threshold_after }}</strong></td>
+                {% endif %}
             </tr>
             {% else %}
             <tr>

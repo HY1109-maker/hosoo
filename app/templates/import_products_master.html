@@ -3,16 +3,8 @@
 {% block content %}
 <div class="container mt-4">
     <h2>商品マスタの一括インポート</h2>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
 
-    <p class="lead">
+    <p>
         商品マスタ情報を、CSVまたはExcel形式で一括で登録・更新できます。<br>
         ファイルには必ず「<strong>品番</strong>」「<strong>商品名</strong>」の列（ヘッダー）を含めてください。<br>
         「<strong>販売価格</strong>」「<strong>原価</strong>」の列は任意です。品番が一致する商品が存在する場合は、情報が上書きされます。
