@@ -268,7 +268,7 @@ def update_inventory():
         db.session.commit() # コミットしてinventory.idを確定させる
         
         # ログは新規作成なので「0から」として記録
-        log_entry = InventoryLog(inventory=inventory, user=current_user, quantity_before=0, quantity_after=new_quantity)
+        log_entry = InventoryLog(inventory=inventory, user=current_user, quantity_before=0, quantity_after=new_quantity, threshold_before=0, threshold_after=new_threshold)
         db.session.add(log_entry)
 
     # --- B: 既存の在庫を更新する場合 ---
@@ -281,7 +281,8 @@ def update_inventory():
         
         # ログ記録
         quantity_before = inventory.quantity
-        log_entry = InventoryLog(inventory=inventory, user=current_user, quantity_before=quantity_before, quantity_after=new_quantity)
+        threshold_before = inventory.threshold
+        log_entry = InventoryLog(inventory=inventory, user=current_user, quantity_before=quantity_before, quantity_after=new_quantity, threshold_before=threshold_before, threshold_after=new_threshold)
         db.session.add(log_entry)
         
         # 在庫更新
@@ -298,7 +299,7 @@ def update_inventory():
         'new_threshold': inventory.threshold
     })
 
-@main.route('/import_data', methods=['GET', 'POST'])
+@main.route('/admin/import_data', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def import_data():

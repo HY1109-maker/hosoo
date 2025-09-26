@@ -67,6 +67,8 @@ class InventoryLog(db.Model):
     timestamp = db.Column(db.DateTime, default=get_jst_now, nullable=False)
     quantity_before = db.Column(db.Integer, nullable=False)
     quantity_after = db.Column(db.Integer, nullable=False)
+    threshold_before = db.Column(db.Integer, nullable=False)
+    threshold_after = db.Column(db.Integer, nullable=False)
     # 外部キー
     inventory_id = db.Column(db.Integer, db.ForeignKey('inventory.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)

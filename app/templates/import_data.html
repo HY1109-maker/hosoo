@@ -1,35 +1,40 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <h2>データの一括インポート</h2>
-    <p>
-        GoogleスプレッドシートやExcelで管理している在庫データを、CSVまたはExcel形式で一括で取り込めます。<br>
-        ファイルには必ず「<strong>品番</strong>」「<strong>店舗名</strong>」「<strong>在庫数</strong>」の列（ヘッダー）を含めてください。<br>
-        新しい品番を登録する場合は、「<strong>商品名</strong>」の列も必要です。
-    </p>
-    
-    <div class="card my-4">
-        <div class="card-body">
-            <form method="post" enctype="multipart/form-data">
-                {{ form.hidden_tag() }}
-                <div class="mb-3">
-                    {{ form.csv_file.label(class="form-label")}}
-                    {{ form.csv_file(class="form-container")}}
-                    {% for error in form.csv_file.errors %}
-                        <span class="text-danger">[{{ error }}]</span>
-                    {% endfor %}
-                </div>
-                {{ form.submit(class="btn btn-primary") }}
-            </form>
-        </div>
+
+<div class="container mt-4">
+    <h1 class="mb-4">データインポート</h1>
+    <div class="import-tabs d-flex mb-3">
+        <button id="inventory-tab-btn" class="btn tab-link active" onclick="openTab(event, 'inventory-content')">在庫データの一括インポート</button>
+        <button id="master-tab-btn" class="btn tab-link" onclick="openTab(event, 'master-content')">商品マスタの一括インポート</button>
     </div>
-    <h5>サンプルCSVフォーマット</h5>
-    <pre><code>
-        品番,商品名,店舗名,在庫数
-        T001,ポーチ,東京,50
-        T001,ポーチ,京都,15
-        S002,鞄,京都,20
-    </code></pre>
+    <div id="inventory-content" class="tab-content active" style="display: block;">
+        {% include 'import_inventory_data.html' %}
+    </div>
+    <div id="master-content" class="tab-content" style="display: none;">
+        {% include 'import_products_master.html' %}
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName('tab-content');
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-link");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "")
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active"
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('inventory-tab-btn').click(); // 在庫タブをデフォルトでクリック
+    });
+</script>
 {% endblock %}
