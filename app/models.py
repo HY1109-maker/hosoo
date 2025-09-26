@@ -83,6 +83,7 @@ class InventoryLog(db.Model):
 class ProductLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=get_jst_now, nullable=False)
+    change_set_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid.uuid4()))
     field_changed = db.Column(db.String(64), nullable=False) # 'name' or 'item_number'
     value_before = db.Column(db.String(128), nullable=False)
     value_after = db.Column(db.String(128), nullable=False)
@@ -95,3 +96,5 @@ class ProductLog(db.Model):
 
     def __repr__(self):
         return f'<ProductLog {self.timestamp}>'
+    
+import uuid

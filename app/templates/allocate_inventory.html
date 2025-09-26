@@ -14,6 +14,7 @@
                     <tr>
                         <th>店舗名</th>
                         <th>在庫数</th>
+                        <th>警告閾値</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -26,6 +27,9 @@
                             </td>
                             <td>
                                 {{ entry_form.quantity(class="form-control") }}
+                            </td>
+                            <td>
+                                {{entry_form.threshold(class="form-control")}}
                             </td>
                         </tr>
                     {% endfor %}

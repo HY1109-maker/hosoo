@@ -20,6 +20,20 @@
                     <span class="error-msg">[{{ error }}]</span>
                 {% endfor %}
             </div>
+            <div class="mb-3">
+                    {{ form.price.label(class="form-label") }}
+                    {{ form.price(class="form-control") }}
+                    {% for error in form.price.errors %}
+                        <span class="text-danger">[{{ error }}]</span>
+                    {% endfor %}
+                </div>
+                <div class="mb-3">
+                    {{ form.cost.label(class="form-label") }}
+                    {{ form.cost(class="form-control") }}
+                    {% for error in form.cost.errors %}
+                        <span class="text-danger">[{{ error }}]</span>
+                    {% endfor %}
+                </div>
             <div class="form-submit-area mb-3">
                 {{ form.submit(class="submit-btn")}}
             </div>

@@ -58,6 +58,7 @@ class InventoryEntryForm(FlaskForm):
     store_id = HiddenField()
     store_name = StringField('ストア名', render_kw={'readonly': True})
     quantity = IntegerField('初期在庫数', default=0, validators=[DataRequired(), NumberRange(min=0)])
+    threshold = IntegerField('警告閾値', default=0, validators=[DataRequired(), NumberRange(min=0)])
 
     class Meta:
         csrf = False

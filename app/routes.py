@@ -112,11 +112,13 @@ def products():
 @main.route('/add_product', methods=['GET', 'POST'])
 @login_required
 def add_product():
-    form=ProductForm()
+    form=AddProductForm()
     if form.validate_on_submit():
         product = Product(
             item_number = form.item_number.data,
-            name = form.name.data
+            name = form.name.data,
+            price = form.price.data,
+            cost = form.cost.data
         )
         db.session.add(product)
         db.session.commit()
@@ -135,19 +137,27 @@ def allocate_inventory(product_id):
     if request.method == 'POST' and form.validate_on_submit():
         for entry in form.inventories.data:
             store_id = int(entry['store_id'])
-            quantity = int(entry['quantity'])
+            new_quantity = int(entry['quantity'])
+            new_threshold = int(entry['threshold'])
 
             inventory = Inventory.query.filter_by(product_id=product.id, store_id=store_id).first()
             if inventory:
-                inventory.quantity = quantity
+                quantity_before = inventory.quantity
+                threshold_before = inventory.threshold
+                inventory.quantity = new_quantity
             else:
                 inventory = Inventory(
                     product_id = product.id,
                     store_id=store_id,
-                    quantity=quantity
+                    quantity=new_quantity,
+                    threshold=new_threshold
                 )
                 db.session.add(inventory)
+                quantity_before = 0
+                threshold_before = 0
 
+            log_entry = InventoryLog(inventory=inventory, user=current_user, quantity_before=quantity_before, quantity_after=new_quantity, threshold_before=threshold_before, threshold_after=new_threshold)
+            db.session.add(log_entry)
         db.session.commit()
         flash(f'[{product.name}]の在庫情報を保存しました。')
         return redirect(url_for('main.products'))
