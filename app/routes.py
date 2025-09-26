@@ -191,20 +191,32 @@ def edit_inventory(inventory_id):
         # --- 1. ログを記録 ---
         # 変更前の在庫数を記録
         quantity_before = inventory.quantity
+        threshold_before = inventory.threshold
         
         log_entry = InventoryLog(
             inventory=inventory,
             user=current_user,
             quantity_before=quantity_before,
-            quantity_after=form.quantity.data
+            quantity_after=form.quantity.data,
+            threshold_before=threshold_before,
+            threshold_after=form.threshold.data
         )
         db.session.add(log_entry)
 
-        # --- 2. 在庫数を更新 ---
+        # --- 2. quantity and threshold will be updated---
         inventory.quantity = form.quantity.data
+        inventory.threshold = form.threshold.data
         
-        # --- 3. ログと在庫数の変更を両方コミット ---
+        # --- 3. Log and inventory are commited ---
         db.session.commit()
+
+        if inventory.quantity != quantity_before and inventory.threshold != threshold_before:
+            flash(f'「{inventory.product.name}」の在庫と閾値が更新されました。')
+        elif inventory.quantity != quantity_before and inventory.threshold == threshold_before:
+            flash(f'「{inventory.product.name}」の在庫が更新されました。')
+        elif inventory.quantity == quantity_before and inventory.threshold != threshold_before:
+            flash(f'「{inventory.product.name}」の閾値が更新されました。')
+
         
         flash(f'「{inventory.product.name}」の在庫が更新されました。')
         return redirect(url_for('main.products'))
@@ -224,15 +236,6 @@ def delete_product(product_id):
     flash('プロダクトが削除されました')
     return redirect(url_for('main.products'))
 
-@main.route('/bill')
-@login_required
-def bill():
-    return render_template('bill.html', title='Bill')
-
-@main.route('/')
-@login_required
-def sails():
-    return render_template('sails_index.html', title='Sails')
 
 @main.route('/api/update_inventory', methods=['POST'])
 @login_required
@@ -278,6 +281,8 @@ def update_inventory():
             return jsonify({'status': 'error', 'message': '所属ストア以外の在庫は編集できません'}), 403
         if not inventory:
             return jsonify({'status': 'error', 'message': '在庫が見つかりません'}), 404
+        if inventory.quantity == new_quantity and inventory.threshold == new_threshold:
+            return jsonify({'status': 'error', 'message': '変更がありませんでした'}), 403
         
         # ログ記録
         quantity_before = inventory.quantity
