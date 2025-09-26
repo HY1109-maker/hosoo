@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>商品マスタ編集: {{ product.name }}</h2>
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.item_number.label(class="form-label") }}
+                    {{ form.item_number(class="form-control") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.price.label(class="form-label") }}
+                    {{ form.price(class="form-control") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.cost.label(class="form-label") }}
+                    {{ form.cost(class="form-control") }}
+                </div>
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('main.products_master') }}" class="btn btn-secondary">キャンセル</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

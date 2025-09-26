@@ -111,6 +111,7 @@ class StoreForm(FlaskForm):
         store = Store.query.filter_by(name=name.data).first()
         if store:
             raise ValidationError('この店舗名は既に使用されています。')
+
         
         
 class EditProductForm(FlaskForm):

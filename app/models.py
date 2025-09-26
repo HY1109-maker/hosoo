@@ -37,7 +37,6 @@ class Store(db.Model):
         return f'<Store {self.name}>'
 
 class Product(db.Model):
-    # ...変更なし...
     id = db.Column(db.Integer, primary_key=True)
     item_number = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(128), nullable=False)
