@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-<<<<<<< HEAD
 
 {% block content %}
 <div class="container mt-4">
@@ -23,11 +22,6 @@
         {% endif %}
     {% endwith %}
 
-=======
-{% block content %}
-<div class="container mt-4">
-    <h1>商品マスタ管理</h1>
->>>>>>> add-inventoryLog
     <table class="table table-hover">
         <thead>
             <tr>
@@ -46,7 +40,6 @@
                 <td>{{ product.price if product.price is not none else '未設定' }}</td>
                 <td>{{ product.cost if product.cost is not none else '未設定' }}</td>
                 <td>
-<<<<<<< HEAD
                     {# 管理者と店長のみ編集ボタンを表示 #}
                     {% if current_user.role in ['admin', 'manager'] %}
                         <a href="{{ url_for('main.edit_product_master', product_id=product.id) }}" class="btn btn-secondary btn-sm">編集</a>
@@ -59,11 +52,6 @@
             <tr>
                 <td colspan="5" class="text-center">商品マスタはまだ登録されていません。</td>
             </tr>
-=======
-                    <a href="{{ url_for('main.edit_product_master', product_id=product.id) }}" class="btn btn-secondary btn-sm">編集</a>
-                </td>
-            </tr>
->>>>>>> add-inventoryLog
             {% endfor %}
         </tbody>
     </table>

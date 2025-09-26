@@ -1,5 +1,36 @@
-{% extends "base.html"%}
+{% extends "base.html" %}
 
 {% block content %}
+<div class="container mt-4">
+    <h2>商品マスタの一括インポート</h2>
+    <p>
+        商品マスタ情報を、CSVまたはExcel形式で一括で登録・更新できます。<br>
+        ファイルには必ず「<strong>品番</strong>」「<strong>商品名</strong>」の列（ヘッダー）を含めてください。<br>
+        「<strong>販売価格</strong>」「<strong>原価</strong>」の列は任意です。品番が一致する商品が存在する場合は、情報が上書きされます。
+    </p>
 
+    <div class="card my-4">
+        <div class="card-body">
+            {# フォーム部分はimport_data.htmlと全く同じ #}
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.csv_file.label(class="form-label", text="CSV/Excelファイル") }}
+                    {{ form.csv_file(class="form-control") }}
+                    {% for error in form.csv_file.errors %}
+                        <span class="text-danger">[{{ error }}]</span>
+                    {% endfor %}
+                </div>
+                {{ form.submit(class="btn btn-primary", value="商品マスタをインポート") }}
+            </form>
+        </div>
+    </div>
+
+    <h5>サンプルCSVフォーマット:</h5>
+    <pre><code>品番,商品名,販売価格,原価
+T001,ロゴ入りTシャツ,3000,1200
+S002,ロングスカート,8000,3500
+P003,新作パンツ,9500,</code></pre>
+
+</div>
 {% endblock %}
