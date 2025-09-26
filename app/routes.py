@@ -3,7 +3,7 @@ from werkzeug.utils import secure_filename
 from flask_login import login_user, logout_user, login_required, current_user
 from .models import User, Product, Store, Inventory, InventoryLog, ProductLog
 from . import db
-from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm, AdminEditProfileForm, StoreForm, EditProductForm
+from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, AllocateInventoryForm, InventoryEntryForm, CsvUploadForm, AdminEditProfileForm, StoreForm, EditProductForm, AddProductForm
 import pandas as pd
 import os
 import chardet
@@ -615,6 +615,29 @@ def import_products_master():
                 os.remove(filepath)
         
     return render_template('import_products_master.html', title='商品マスタインポート', form=form)
+
+@main.route('/add_product_master', methods=['GET', 'POST'])
+@login_required
+def add_product_master():
+    # 権限チェック (マネージャー以上)
+    if current_user.role not in ['admin', 'manager']:
+        abort(403)
+        
+    form = AddProductForm()
+    
+    if form.validate_on_submit():
+        product = Product(
+            item_number=form.item_number.data,
+            name=form.name.data,
+            price=form.price.data,
+            cost=form.cost.data
+        )
+        db.session.add(product)
+        db.session.commit()
+        flash('新しい商品が商品マスタに追加されました。')
+        return redirect(url_for('main.products_master'))
+
+    return render_template('add_product_master.html', form=form)
 
 
 

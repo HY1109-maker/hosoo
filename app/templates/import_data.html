@@ -34,7 +34,14 @@
         evt.currentTarget.className += " active"
     }
     document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('inventory-tab-btn').click(); // 在庫タブをデフォルトでクリック
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+
+        if (tabParam === 'master') {
+            openTab(null, 'master-content'); // master タブを表示
+        } else {
+            openTab(null, 'inventory-content'); // デフォルトは inventory タブ
+        }
     });
 </script>
 {% endblock %}

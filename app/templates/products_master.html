@@ -7,9 +7,14 @@
         <h1 class="mb-0">商品マスタ管理</h1>
         {# 管理者のみにインポートボタンを表示（この機能は後で作成） #}
         {% if current_user.role == 'admin' %}
-            <a href="{{ url_for('main.import_products_master') }}" class="btn btn-success">
+        <div class="btn-container">
+            <a href="{{ url_for('main.import_data') }}?tab=master" class="btn btn-success me-2">
                 <i class="fas fa-file-import me-2"></i>一括インポート
             </a>
+            <a href="{{ url_for('main.add_product_master') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>新規追加
+            </a>
+        </div>
         {% endif %}
     </div>
     {# --- ▲▲▲ 修正ここまで ▲▲▲ --- #}

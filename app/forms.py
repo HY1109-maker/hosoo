@@ -134,4 +134,16 @@ class EditProductForm(FlaskForm):
                 raise ValidationError('この品番は既に使用されています。')
             
 
+class AddProductForm(FlaskForm):
+    item_number = StringField('品番', validators=[DataRequired()])
+    name = StringField('商品名', validators=[DataRequired()])
+    price = IntegerField('販売価格', validators=[Optional(), NumberRange(min=0)])
+    cost = IntegerField('原価', validators=[Optional(), NumberRange(min=0)])
+    submit = SubmitField('追加')
+
+    def validate_item_number(self, item_number):
+        product = Product.query.filter_by(item_number=item_number.data).first()
+        if product:
+            raise ValidationError('この品番は既に使用されています。')
+
 
