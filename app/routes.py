@@ -565,6 +565,72 @@ def edit_product_master(product_id):
         
     return render_template('edit_product_master.html', form=form, product=product)
 
+@main.route('/admin/import_products', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def import_products_master():
+    form = CsvUploadForm()
+    if form.validate_on_submit():
+        # ... (ファイルアップロードとPandasでの読み込み部分は、import_dataと全く同じ) ...
+        f = form.csv_file.data
+        filename = secure_filename(f.filename)
+        filepath = os.path.join(current_app.instance_path, 'uploads', filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        f.save(filepath)
+
+        try:
+            if filename.endswith(('.xlsx', '.xlsm')):
+                df = pd.read_excel(filepath)
+            else:
+                with open(filepath, 'rb') as rawdata:
+                    result = chardet.detect(rawdata.read())
+                df = pd.read_csv(filepath, encoding=result['encoding'], on_bad_lines='warn')
+
+            updated_count = 0
+            created_count = 0
+
+            # --- ▼▼▼ ここからが商品マスタ用の処理ロジック ▼▼▼ ---
+            for index, row in df.iterrows():
+                # 必須項目（品番, 商品名）のチェック
+                if not all(k in row for k in ['品番', '商品名']):
+                    flash('CSVのヘッダーに「品番」と「商品名」が含まれている必要があります。', 'danger')
+                    return redirect(url_for('main.import_products_master'))
+
+                # 品番で既存商品を検索
+                product = Product.query.filter_by(item_number=row['品番']).first()
+
+                if product:
+                    # 存在すれば更新
+                    product.name = row['商品名']
+                    # 価格と原価は任意項目なので、列が存在すれば更新
+                    if '販売価格' in row and pd.notna(row['販売価格']):
+                        product.price = int(row['販売価格'])
+                    if '原価' in row and pd.notna(row['原価']):
+                        product.cost = int(row['原価'])
+                    updated_count += 1
+                else:
+                    # 存在しなければ新規作成
+                    product = Product(
+                        item_number=row['品番'],
+                        name=row['商品名'],
+                        price=int(row['販売価格']) if '販売価格' in row and pd.notna(row['販売価格']) else None,
+                        cost=int(row['原価']) if '原価' in row and pd.notna(row['原価']) else None
+                    )
+                    db.session.add(product)
+                    created_count += 1
+
+            db.session.commit()
+            flash(f'商品マスタのインポート完了！ {created_count}件を新規登録し、{updated_count}件を更新しました。', 'success')
+            return redirect(url_for('main.products_master'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'インポート中にエラーが発生しました: {e}', 'danger')
+        
+    return render_template('import_products_master.html', title='商品マスタインポート', form=form)
+
+
+
 
 
 

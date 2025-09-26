@@ -40,12 +40,10 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     item_number = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(128), nullable=False)
-    price = db.Column(db.Integer, nullable=True)
+    # price = db.Column(db.Integer, nullable=True)
     cost = db.Column(db.Integer, nullable=False)
 
-    inventories = db.relationship('Inventory', back_populates='product', lazy='dynamic')
     product_logs = db.relationship('ProductLog', back_populates='product', lazy='dynamic')
-    
     def __repr__(self):
         return f'<Product {self.name}>'
 
