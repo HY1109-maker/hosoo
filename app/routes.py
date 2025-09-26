@@ -7,6 +7,7 @@ from .forms import RegistrationForm, LoginForm, ProductForm, EditInventoryForm, 
 import pandas as pd
 import os
 import chardet
+import uuid
 from .decorators import admin_required
 
 main = Blueprint('main', __name__)
@@ -501,61 +502,75 @@ def products_master():
 
 @main.route('/edit_product_master/<int:product_id>', methods=['GET', 'POST'])
 @login_required
+@main.route('/edit_product_master/<int:product_id>', methods=['GET', 'POST'])
+@login_required
 def edit_product_master(product_id):
-    """商品マスタ編集ページ（マネージャー以上が編集可能）"""
-    # 権限チェック (管理者または店長のみ編集可能)
+    # 権限チェック (マネージャー以上)
     if current_user.role not in ['admin', 'manager']:
-        flash('商品マスタを編集する権限がありません。', 'danger')
-        abort(403) # 403 Forbiddenを返すか、products_masterにリダイレクト
+        abort(403) # 403 Forbidden エラーを返す
 
     product = Product.query.get_or_404(product_id)
-    form = EditProductForm(original_item_number=product.item_number) # 元の品番を渡してフォームを初期化
+    form = EditProductForm(obj=product) # obj=product でフォームに現在の値が自動的にセットされる
 
     if form.validate_on_submit():
-        # 変更前の値をログ記録用に保持
-        before_values = {
+        # フォームから送信されたデータと現在のProductオブジェクトを比較するため、
+        # 変更前の値をディクショナリに保存
+        original_values = {
             'item_number': product.item_number,
             'name': product.name,
             'price': product.price,
-            'cost': product.cost
+            'cost': product.cost,
+            # 将来的に他のフィールド（例: description, category_idなど）をProductに追加した場合、
+            # ここにも追加してログ監視対象にする
         }
         
-        # データベースを更新
+        # データベースのProductオブジェクトをフォームデータで更新
         product.item_number = form.item_number.data
         product.name = form.name.data
-        product.price = form.price.data if form.price.data is not None else None # 空欄の場合はNoneを保存
-        product.cost = form.cost.data if form.cost.data is not None else None   # 空欄の場合はNoneを保存
         
-        # 変更があった項目をProductLogに記録
-        if before_values['item_number'] != product.item_number:
-            log = ProductLog(product=product, user=current_user, field_changed='品番', 
-                             value_before=str(before_values['item_number']), value_after=str(product.item_number))
-            db.session.add(log)
-        if before_values['name'] != product.name:
-            log = ProductLog(product=product, user=current_user, field_changed='商品名', 
-                             value_before=str(before_values['name']), value_after=str(product.name))
-            db.session.add(log)
-        if before_values['price'] != product.price:
-            log = ProductLog(product=product, user=current_user, field_changed='販売価格', 
-                             value_before=str(before_values['price']), value_after=str(product.price))
-            db.session.add(log)
-        if before_values['cost'] != product.cost:
-            log = ProductLog(product=product, user=current_user, field_changed='原価', 
-                             value_before=str(before_values['cost']), value_after=str(product.cost))
-            db.session.add(log)
+        # priceとcostはOptionalなので、データがない場合はNoneをセット
+        product.price = form.price.data if form.price.data is not None else None
+        product.cost = form.cost.data if form.cost.data is not None else None
+        
+        # ▼▼▼ 商品マスタ変更ログの記録 ▼▼▼
+        # 一連の変更操作を識別するためのユニークなトランザクションIDを生成
+        change_set_id = str(uuid.uuid4())
 
+        # 変更されたフィールドごとにログを記録
+        for field_name, original_value in original_values.items():
+            current_value = getattr(product, field_name)
+
+            # PythonのNoneとDBのNULLを適切に比較するため、文字列化して比較
+            # また、元の値がNone, 新しい値が0 のようなケースも考慮
+            # (例: priceが元々Noneで、フォームで0が入力された場合も変更とみなす)
+            
+            # str()にNoneを渡すと'None'という文字列になるため、Noneを明示的にチェック
+            original_value_str = str(original_value) if original_value is not None else None
+            current_value_str = str(current_value) if current_value is not None else None
+
+            if original_value_str != current_value_str: # 値が変更された場合のみログを記録
+                log = ProductLog(
+                    product=product,
+                    user=current_user,
+                    change_set_id=change_set_id, # 同じchange_set_idを割り当てる
+                    field_changed=field_name,
+                    value_before=original_value_str, # Noneの場合はNone文字列を避けてNULLを格納
+                    value_after=current_value_str    # Noneの場合はNone文字列を避けてNULLを格納
+                )
+                db.session.add(log)
+        
+        # Productオブジェクトと、生成された全てのProductLogレコードをデータベースにコミット
         db.session.commit()
-        flash('商品マスタ情報が更新されました。', 'success') # flashメッセージに'success'カテゴリを付けて色分け
+
+        flash('商品情報が更新されました。')
         return redirect(url_for('main.products_master'))
 
     elif request.method == 'GET':
-        # GETリクエストの場合、フォームに現在の値を設定
-        form.item_number.data = product.item_number
-        form.name.data = product.name
-        form.price.data = product.price
-        form.cost.data = product.cost
+        # GETリクエストの場合、フォームには既にobj=productで現在の値がセットされている
+        pass # 特に何もしなくてもフォームに表示される
         
     return render_template('edit_product_master.html', form=form, product=product)
+
 
 @main.route('/admin/import_products_master', methods=['GET', 'POST'])
 @login_required
